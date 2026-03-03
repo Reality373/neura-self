@@ -47,7 +47,7 @@ class WebSolver:
                 "websiteKey": self.site_key,
                 "websiteURL": "https://owobot.com",
             },
-            "softID": 94493,
+            "softID": 100629,
         }
 
         async with aiohttp.ClientSession() as session:
