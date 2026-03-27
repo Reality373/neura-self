@@ -33,7 +33,11 @@ def ensure_dependencies():
         subprocess.check_call([sys.executable, "-m", "pip", "install", "git+https://github.com/dolfies/discord.py-self@20ae80b398ec83fa272f0a96812140e14868c88"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         print("[+] Fixed. Restarting...\n")
         os.execv(sys.executable, [sys.executable] + sys.argv)
-    except:
+    except Exception as e:
+        print(f"\n[X] Repair failed: {e}")
+        print("[!] make sure git is installed.")
+        print("[!] Try running: pip install git+https://github.com/dolfies/discord.py-self@20ae80b398ec83fa272f0a96812140e14868c88")
+        input("\nPress Enter to exit...")
         sys.exit(1)
 
 ensure_dependencies()
