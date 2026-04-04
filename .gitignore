@@ -123,3 +123,4 @@ Desktop.ini
 *.sqlite
 *.sqlite3
 *.db
+config/accounts.json
