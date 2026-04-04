@@ -268,7 +268,12 @@ class NeuraBot(commands.Bot):
 
         first = cmd.lower().split()[0] if cmd else ""
         if first in known and not cmd.lower().startswith(self.prefix.lower()):
-            return f"{self.prefix}{cmd}"
+            cmd = f"{self.prefix}{cmd}"
+        
+        stealth_cfg = self.config.get('stealth', {})
+        from modules.stealth_syntax import apply_syntax_variance
+        cmd = apply_syntax_variance(cmd, stealth_cfg)
+
         return cmd
     
     async def send_message(self, content, skip_typing=False, priority=False):
@@ -503,6 +508,7 @@ class NeuraBot(commands.Bot):
     async def neura_queue_worker(self):
         await self.wait_until_ready()
         self.log("SYS", "NeuraQueue Worker started.")
+        cmd_counter = 0
         while self.active:
             try:
                 priority, ts, content, options = await self.neura_queue.get()
@@ -550,6 +556,10 @@ class NeuraBot(commands.Bot):
                     skip_typing = options.get("skip_typing")
                     if skip_typing is None:
                         skip_typing = priority <= 1 or content.lower().strip() == "owo"
+
+                    stealth_cfg = self.config.get('stealth', {})
+                    from modules.stealth_curiosity import evaluate_curiosity_trigger
+                    await evaluate_curiosity_trigger(self, stealth_cfg)
 
                     if cmd_id and cmd_id in self.cmd_states:
                         last_ran = self.cmd_states[cmd_id]['last_ran']

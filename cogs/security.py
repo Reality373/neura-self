@@ -12,6 +12,7 @@
 import sys
 import asyncio
 import time
+import random
 import re
 import os
 import threading
@@ -176,6 +177,12 @@ class Security(commands.Cog):
         if isinstance(message.channel, discord.DMChannel) and message.author.id == int(self.monitor_id):
             if (discord.utils.utcnow() - message.created_at).total_seconds() > 30: return
             if "i have verified that you are human" in message.content.lower():
+                self.bot.log("SUCCESS", "Verified detected in DM. Captcha solved successfully. Simulating post-captcha fatigue...")
+                
+                stealth_cfg = self.bot.config.get('stealth', {})
+                from modules.stealth_fatigue import apply_post_captcha_fatigue
+                await apply_post_captcha_fatigue(self.bot, stealth_cfg)
+                
                 self.bot.paused = False
                 self.bot.throttle_until = 0.0
                 self.bot.last_sent_time = 0
@@ -187,8 +194,7 @@ class Security(commands.Cog):
                     grinding_cog.cooldowns['battle'] = 0
                     grinding_cog.cooldowns['owo'] = 0
                 
-                self.bot.log("SUCCESS", "Verified detected in DM. Captcha solved successfully. Resuming...")
-                self.bot.log("INFO", "All cooldowns reset. Bot will resume in 2 seconds...")
+                self.bot.log("INFO", "All cooldowns reset. Bot resuming operations...")
                 await asyncio.sleep(2)
                 return
 

@@ -18,17 +18,24 @@ class NeuraHuman:
     last_break_check = time.time()
     break_lock = asyncio.Lock()
     is_on_break = False
-    
+
     @staticmethod
     async def neura_send(bot, channel, content):
         start_time = time.time()
+        
+        stealth_cfg = bot.config.get('stealth', {})
+        if not isinstance(stealth_cfg, dict): stealth_cfg = {}
+        
+        from modules.stealth_circadian import handle_circadian_rhythm, get_session_mode, set_session_mode
+        from modules.stealth_typo import apply_typo_logic
+
+        await handle_circadian_rhythm(bot, stealth_cfg)
         
         if NeuraHuman.is_on_break:
             bot.log("STEALTH", "Waiting for existing break to finish...")
             while NeuraHuman.is_on_break:
                 await asyncio.sleep(1)
         
-        stealth_cfg = bot.config.get('stealth', {})
         hb_cfg = stealth_cfg.get('human_break', {})
         hb_enabled = hb_cfg.get('enabled', True)
         hb_duration = hb_cfg.get('duration_min', 10) * 60
@@ -58,14 +65,16 @@ class NeuraHuman:
                     finally:
                         NeuraHuman.last_break_check = time.time()
                         NeuraHuman.is_on_break = False
-                        bot.log("STEALTH", "Break finished. Resuming operations.")
+                        set_session_mode(random.choices(['BINGE', 'CASUAL'], weights=[0.4, 0.6])[0])
+                        bot.log("STEALTH", f"Break finished. Resuming operations. Session mode: {get_session_mode()}")
                 elif NeuraHuman.is_on_break:
                      while NeuraHuman.is_on_break:
                         await asyncio.sleep(1)
+                        
+        if get_session_mode() == 'CASUAL':
+            casual_delay = random.uniform(1.0, 5.0)
+            await asyncio.sleep(casual_delay)
 
-        stealth_cfg = bot.config.get('stealth', {})
-        if not isinstance(stealth_cfg, dict):
-            stealth_cfg = {}
         config = stealth_cfg.get('typing', {})
         if not isinstance(config, dict):
             config = {}
@@ -81,9 +90,12 @@ class NeuraHuman:
         reaction_max = config.get('reaction_max', 3.0)
         mistake_rate = config.get('mistake_rate', 5)
         extra_delay = config.get('extra_delay', 0)
+        lazy_typo_rate = config.get('lazy_typo_rate', 1)
         
         if isinstance(mistake_rate, (int, float)) and mistake_rate > 1:
             mistake_rate /= 100.0
+        if isinstance(lazy_typo_rate, (int, float)) and lazy_typo_rate > 1:
+            lazy_typo_rate /= 100.0
 
         reaction_time = random.uniform(reaction_min if isinstance(reaction_min, (int, float)) else 1.0, 
                                        reaction_max if isinstance(reaction_max, (int, float)) else 3.0)
@@ -99,21 +111,19 @@ class NeuraHuman:
                 start_time = time.time()
                 
                 while i < len(chars):
-                    if bot.paused:
+                    bot_paused = getattr(bot, 'paused', False)
+                    if bot_paused:
                         return False
                     char = chars[i]
                     delay = random.uniform(0.02, 0.08)
                     if char in ".,!?;": delay += random.uniform(0.1, 0.2)
                     
-                    if isinstance(mistake_rate, (int, float)) and random.random() < mistake_rate and i < len(chars) - 1:
-                        typo_count += 1
-                        await asyncio.sleep(random.uniform(0.1, 0.2)) 
-                        await asyncio.sleep(random.uniform(0.2, 0.5))
-                        await asyncio.sleep(random.uniform(0.1, 0.2))
-                    
+                    typo_count = await apply_typo_logic(chars, i, mistake_rate, lazy_typo_rate, typo_count)
+
                     await asyncio.sleep(delay)
                     i += 1
                 
+                final_content = "".join(chars)
                 enter_delay = random.uniform(0.3, 0.7) + (random.uniform(0, extra_delay) if isinstance(extra_delay, (int, float)) and extra_delay > 0 else 0)
                 await asyncio.sleep(enter_delay)
                 
@@ -121,7 +131,7 @@ class NeuraHuman:
                 if typo_count > 0:
                     bot.log("STEALTH", f"Typing: {total_time}s (Simulated {typo_count} typos)")
                 
-                await channel.send(content)
+                await channel.send(final_content)
                 return True
         except Exception:
             try:
