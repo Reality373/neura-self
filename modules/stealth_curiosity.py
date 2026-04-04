@@ -2,11 +2,7 @@ import asyncio
 import random
 import time
 
-cmd_counter_global = 0
-
 async def evaluate_curiosity_trigger(bot, stealth_cfg):
-    global cmd_counter_global
-    
     cur_cfg = stealth_cfg.get('curiosity', {})
     if not cur_cfg.get('enabled', False):
         return False
@@ -15,14 +11,18 @@ async def evaluate_curiosity_trigger(bot, stealth_cfg):
     trigger_min = cur_cfg.get('trigger_min', 100)
     trigger_max = cur_cfg.get('trigger_max', 250)
     
+    if not hasattr(bot, 'cmd_counter'):
+        bot.cmd_counter = 0
+
     if curiosity_cmds:
-        cmd_counter_global += 1
-        if cmd_counter_global > random.randint(trigger_min, trigger_max):
+        bot.cmd_counter += 1
+        if bot.cmd_counter > random.randint(trigger_min, trigger_max):
             curiosity_cmd = random.choice(curiosity_cmds)
             bot.log("STEALTH", f"Curiosity triggered: Checking {curiosity_cmd}")
             await bot._send_safe(curiosity_cmd, skip_typing=False)
             bot.last_sent_time = time.time()
-            cmd_counter_global = 0
+            bot.cmd_counter = 0
+
             await asyncio.sleep(random.uniform(2.0, 5.0))
             return True
             

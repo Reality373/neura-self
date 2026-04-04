@@ -27,19 +27,18 @@ class NeuraHuman:
         stealth_cfg = bot.config.get('stealth', {})
         if not isinstance(stealth_cfg, dict): stealth_cfg = {}
         
-        from modules.stealth_circadian import handle_circadian_rhythm, get_session_mode, set_session_mode
+        from modules.stealth_circadian import handle_circadian_rhythm
         from modules.stealth_typo import apply_typo_logic
 
         await handle_circadian_rhythm(bot, stealth_cfg)
         
-        if NeuraHuman.is_on_break:
+        if bot.is_on_break:
             bot.log("STEALTH", "Waiting for existing break to finish...")
-            while NeuraHuman.is_on_break:
+            while bot.is_on_break:
                 await asyncio.sleep(1)
 
         # Phase 23: Post-Captcha Stress Scaling
-        # Humans are 'on edge' after a captcha, increasing distraction chances.
-        stress_active = time.time() < getattr(bot, 'stress_until', 0)
+        stress_active = time.time() < bot.stress_until
         
         # Phase 18: Burnout scaling (Distraction chance)
         session_duration = time.time() - bot.start_time
@@ -62,20 +61,20 @@ class NeuraHuman:
         hb_duration = hb_cfg.get('duration_min', 10) * 60
         hb_base_interval = hb_cfg.get('interval_min', 45) * 60
         
-        if NeuraHuman.current_interval is None:
-            NeuraHuman.current_interval = hb_base_interval * (1 + random.uniform(-0.15, 0.15))
+        if bot.current_break_interval is None:
+            bot.current_break_interval = hb_base_interval * (1 + random.uniform(-0.15, 0.15))
             
-        hb_interval = NeuraHuman.current_interval
+        hb_interval = bot.current_break_interval
 
-        runtime = time.time() - NeuraHuman.last_break_check
+        runtime = time.time() - bot.last_break_check
         if hb_enabled and runtime > hb_interval: 
-            async with NeuraHuman.break_lock:
-                if time.time() - NeuraHuman.last_break_check > hb_interval and not NeuraHuman.is_on_break:
-                    NeuraHuman.is_on_break = True
+            async with bot.break_lock:
+                if time.time() - bot.last_break_check > hb_interval and not bot.is_on_break:
+                    bot.is_on_break = True
                     start_break_time = time.time()
                     bot.log("STEALTH", f"Pausing for {int(hb_duration/60)}mins (Break Time)")
                     try:
-                        while NeuraHuman.is_on_break:
+                        while bot.is_on_break:
                             curr_stealth = bot.config.get('stealth', {})
                             curr_hb = curr_stealth.get('human_break', {})
                             
@@ -89,19 +88,18 @@ class NeuraHuman:
                                 
                             await asyncio.sleep(1)
                     finally:
-                        NeuraHuman.last_break_check = time.time()
-                        NeuraHuman.is_on_break = False
-                        NeuraHuman.current_interval = hb_base_interval * (1 + random.uniform(-0.15, 0.15))
-                        set_session_mode(random.choices(['BINGE', 'CASUAL'], weights=[0.4, 0.6])[0])
+                        bot.last_break_check = time.time()
+                        bot.is_on_break = False
+                        bot.current_break_interval = hb_base_interval * (1 + random.uniform(-0.15, 0.15))
+                        bot.session_mode = random.choices(['BINGE', 'CASUAL'], weights=[0.4, 0.6])[0]
                         bot.log("STEALTH", f"Break finished. Simulating app warmup (5-12s)...")
                         await asyncio.sleep(random.uniform(5.0, 12.0))
-                        bot.log("STEALTH", f"Warmup finished. Resuming operations. Session mode: {get_session_mode()}")
-                elif NeuraHuman.is_on_break:
-                     while NeuraHuman.is_on_break:
+                        bot.log("STEALTH", f"Warmup finished. Resuming operations. Mode: {bot.session_mode}")
+                elif bot.is_on_break:
+                     while bot.is_on_break:
                         await asyncio.sleep(1)
                         
-        if get_session_mode() == 'CASUAL' or stress_active:
-            # If stressed, adds extra 1-5s hesitation even in BINGE mode
+        if bot.session_mode == 'CASUAL' or stress_active:
             casual_delay = random.uniform(1.0, 5.0)
             await asyncio.sleep(casual_delay)
 
@@ -120,18 +118,19 @@ class NeuraHuman:
         reaction_max = config.get('reaction_max', 3.0)
         mistake_rate = config.get('mistake_rate', 5)
         
-        # Phase 22: Platform-Specific Behavior Multipliers
-        # Mobile users are slower and sloppier.
+        # Undefined variable fixes
+        lazy_typo_rate = config.get('lazy_typo_rate', 0.2)
+        extra_delay = config.get('extra_delay', 0.1)
+
         platform_delay_mult = 1.0
         platform_error_mult = 1.0
         if bot.is_mobile:
             platform_delay_mult = 1.3
             platform_error_mult = 1.2
             
-        # Phase 20: Mood/Intensity-Based Reaction Scaling
         intensity_factor = 1.0
-        from modules.stealth_circadian import get_session_mode
-        mode = get_session_mode()
+        mode = bot.session_mode
+
         
         if mode == 'BINGE':
             intensity_factor = 0.7 # Faster reactions (0.7x delay)

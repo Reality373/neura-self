@@ -22,6 +22,8 @@ import core.state as state
 import utils.utils as utils
 import asyncio
 from datetime import datetime, timedelta
+from modules.stealth_circadian import get_session_persona, get_session_mode
+from modules.neura_human import NeuraHuman
 
 app = Flask(__name__)
 app.config['JSON_SORT_KEYS'] = False
@@ -243,6 +245,15 @@ def stats():
         },
         'quest_data': st.get('quest_data', []),
         'next_quest_timer': st.get('next_quest_timer'),
+        'stealth_matrix': {
+            'persona': get_session_persona(bot),
+            'mood': get_session_mode(bot),
+            'fatigue_pct': round(min(1.0, (time.time() - bot.start_time) / 14400) * 100, 1) if is_active else 0,
+            'stress_active': (time.time() < bot.stress_until) if is_active else False,
+            'is_on_break': bot.is_on_break if is_active else False,
+            'is_sleeping': bot.is_sleeping if is_active else False,
+            'stealth_factor': bot.config.get('stealth', {}).get('human_stealth_factor', 0.5) if is_active else 0.5
+        },
         'cmd_states': {k: {**v, 'content': '[Dynamic function]' if callable(v.get('content')) else v.get('content')} for k, v in bot.cmd_states.items()} if bot else {}
     }
     

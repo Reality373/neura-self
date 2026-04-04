@@ -7,29 +7,46 @@
     },
     "commands": {
         "owo": {
-            "enabled": true,
-            "cooldown": [10, 13]
+            "enabled": false,
+            "cooldown": [
+                10,
+                13
+            ]
         },
         "hunt": {
             "enabled": true,
             "use_shortform": true,
-            "cooldown": [15, 18],
+            "cooldown": [
+                15,
+                18
+            ],
             "early_bird_chance": 0.15
         },
         "battle": {
             "enabled": true,
             "use_shortform": true,
-            "cooldown": [15, 18]
+            "cooldown": [
+                15,
+                18
+            ]
         },
         "curse": {
             "enabled": false,
-            "cooldown": [310, 400],
+            "cooldown": [
+                310,
+                400
+            ],
             "ping": true,
-            "targets": ["put-curse-target-id-here"]
+            "targets": [
+                "put-curse-target-id-here"
+            ]
         },
         "pray": {
             "enabled": true,
-            "cooldown": [310, 400],
+            "cooldown": [
+                310,
+                400
+            ],
             "ping": true,
             "targets": ""
         },
@@ -55,7 +72,10 @@
             "sell": {
                 "enabled": true,
                 "type": "all",
-                "loot_threshold": [5, 15],
+                "loot_threshold": [
+                    5,
+                    15
+                ],
                 "balance_verify_chance": 0.20,
                 "min_cash_trigger": 1000
             },
@@ -68,14 +88,27 @@
         },
         "gems": {
             "enabled": true,
-            "interval": [15, 20],
-            "order": { "lowestToHighest": false },
+            "interval": [
+                15,
+                20
+            ],
+            "order": {
+                "lowestToHighest": false
+            },
             "tiers": {
-                "common": true, "uncommon": true, "rare": true, 
-                "epic": true, "mythical": true, "legendary": true, "fabled": true
+                "common": true,
+                "uncommon": true,
+                "rare": true,
+                "epic": true,
+                "mythical": true,
+                "legendary": true,
+                "fabled": true
             },
             "types": {
-                "empoweredGem": true, "huntGem": true, "luckyGem": true, "specialGem": false
+                "empoweredGem": true,
+                "huntGem": true,
+                "luckyGem": true,
+                "specialGem": false
             },
             "use_gems_set": false
         },
@@ -94,13 +127,26 @@
             "cash_to_spend": 29000,
             "upgrade": {
                 "enabled": true,
-                "priorities": { "efficiency": 4, "duration": 2, "cost": 5, "gain": 4, "exp": 3, "radar": 1 }
+                "priorities": {
+                    "efficiency": 4,
+                    "duration": 2,
+                    "cost": 5,
+                    "gain": 4,
+                    "exp": 3,
+                    "radar": 1
+                }
             }
         },
         "open": {
             "enabled": false,
-            "crate": { "enabled": false, "type": "all" },
-            "lootbox": { "enabled": false, "type": "all" }
+            "crate": {
+                "enabled": false,
+                "type": "all"
+            },
+            "lootbox": {
+                "enabled": false,
+                "type": "all"
+            }
         },
         "quest": {
             "enabled": true,
@@ -109,7 +155,11 @@
         },
         "rpp": {
             "enabled": true,
-            "active_commands": ["run", "pup", "piku"],
+            "active_commands": [
+                "run",
+                "pup",
+                "piku"
+            ],
             "interval_s": 60
         },
         "shop": {
@@ -119,23 +169,41 @@
             "pre_buy_cash_check": true
         },
         "others": {
-            "rule_reading_delay": [3, 12],
-            "zoo_deliberation": [4, 10],
+            "rule_reading_delay": [
+                3,
+                12
+            ],
+            "zoo_deliberation": [
+                4,
+                10
+            ],
             "favorite_animal_variance": 0.05
         }
     },
     "stealth": {
         "human_break": {
             "enabled": true,
-            "duration_min": [10, 20],
-            "interval_min": [40, 55],
+            "duration_min": [
+                10,
+                20
+            ],
+            "interval_min": [
+                40,
+                55
+            ],
             "jitter_enabled": true
         },
         "typing": {
             "enabled": true,
             "burst_typing": true,
-            "speed_range": [0.01, 0.03],
-            "pause_range": [0.1, 0.25],
+            "speed_range": [
+                0.01,
+                0.03
+            ],
+            "pause_range": [
+                0.1,
+                0.25
+            ],
             "mistake_rate": 0.04,
             "near_miss_backspace_chance": 0.15,
             "uninterruptible_typing": true,
@@ -144,8 +212,14 @@
         },
         "activity_clustering": {
             "enabled": true,
-            "burst_limit": [2, 5],
-            "mini_break_range": [15, 45],
+            "burst_limit": [
+                2,
+                5
+            ],
+            "mini_break_range": [
+                15,
+                45
+            ],
             "dithering_chance": 0.10
         },
         "session": {
@@ -159,26 +233,44 @@
             "fatigue_simulation": {
                 "enabled": true,
                 "slowdown_factor": 1.2,
-                "burnout_rest_min": [20, 40]
+                "burnout_rest_min": [
+                    20,
+                    40
+                ]
             }
         },
         "deliberation_pauses": {
-            "utility": [3, 8],
-            "social": [2, 6]
+            "utility": [
+                3,
+                8
+            ],
+            "social": [
+                2,
+                6
+            ]
         }
     },
     "reactionBot": {
         "enabled": false,
-        "cooldown": [0.5, 1],
+        "cooldown": [
+            0.5,
+            1
+        ],
         "hunt_and_battle": false,
         "owo": false,
         "pray_and_curse": false
     },
     "security": {
         "enabled": true,
-        "reaction_lag_range": [2.0, 5.0],
+        "reaction_lag_range": [
+            2.0,
+            5.0
+        ],
         "stray_command_on_alert": 0.15,
-        "captcha_solver": { "enabled": false, "api_key": "" },
+        "captcha_solver": {
+            "enabled": false,
+            "api_key": ""
+        },
         "open_captcha_url_on_pc": true,
         "captcha": {
             "uncertainty_error_chance": 0.04,
@@ -187,38 +279,61 @@
             "ghost_confusion_typing": 0.02
         },
         "notifications": {
-            "desktop": { "enabled": true, "sound": true, "title": "Neura Security Alert" },
-            "mobile": { "enabled": true, "vibrate": true },
+            "desktop": {
+                "enabled": true,
+                "sound": true,
+                "title": "Neura Security Alert"
+            },
+            "mobile": {
+                "enabled": true,
+                "vibrate": true
+            },
             "webhook": {
                 "enabled": true,
                 "url": "Your-webhook-url-here"
             }
         },
-        "popups": { "enabled": true, "on_ban": true, "on_captcha": true }
+        "popups": {
+            "enabled": true,
+            "on_ban": true,
+            "on_captcha": true
+        }
     },
     "boss": {
         "enabled": true,
-        "reaction_time": [1.0, 4.0],
+        "reaction_time": [
+            1.0,
+            4.0
+        ],
         "join_all_guilds": false,
         "join_chance": 1.0,
         "ignore_guilds": []
     },
     "level_grind": {
         "enabled": false,
-        "cooldown": [60, 90],
+        "cooldown": [
+            60,
+            90
+        ],
         "max_length": 100,
         "min_length": 10
     },
     "platform_settings": {
         "mobile_mode": "auto",
         "open_captcha_url_on_mobile": true,
-        "desktop_refocus_delay": [2, 5],
+        "desktop_refocus_delay": [
+            2,
+            5
+        ],
         "mobile_network_hang_chance": 0.005
     },
     "utilities": {
         "autochannel": {
             "enabled": true,
-            "cooldown": [500, 650]
+            "cooldown": [
+                500,
+                650
+            ]
         }
     }
 }

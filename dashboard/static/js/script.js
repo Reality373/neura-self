@@ -519,6 +519,41 @@ function update() {
             if (document.getElementById('totalOwO')) document.getElementById('totalOwO').innerHTML = `${d.chart_data.owo} <span style="font-size:0.5em; color:#a855f7;" id="owoSession">(${d.chart_data.session_owo} this session)</span>`;
         }
 
+        if (d.stealth_matrix) {
+            const m = d.stealth_matrix;
+            const personaEl = document.getElementById('stealth-persona');
+            const moodEl = document.getElementById('stealth-mood');
+            const fatigueBar = document.getElementById('stealth-fatigue-bar');
+            const fatigueTxt = document.getElementById('stealth-fatigue-txt');
+            const statusEl = document.getElementById('stealth-status');
+            const statusCard = document.getElementById('stealth-status-card');
+
+            if (personaEl) personaEl.innerText = m.persona || 'UNKNOWN';
+            if (moodEl) moodEl.innerText = m.mood || 'BINGE';
+            if (fatigueBar) fatigueBar.style.width = `${m.fatigue_pct}%`;
+            if (fatigueTxt) fatigueTxt.innerText = `${m.fatigue_pct}%`;
+
+            if (statusEl && statusCard) {
+                if (m.is_sleeping) {
+                    statusEl.innerText = 'SLEEPING';
+                    statusEl.style.color = 'var(--text-muted)';
+                    statusCard.classList.remove('alert-active');
+                } else if (m.stress_active) {
+                    statusEl.innerText = 'STRESSED (CAPTCHA)';
+                    statusEl.style.color = 'var(--danger)';
+                    statusCard.classList.add('alert-active');
+                } else if (m.is_on_break) {
+                    statusEl.innerText = 'TAKING BREAK';
+                    statusEl.style.color = 'var(--warning)';
+                    statusCard.classList.add('alert-active');
+                } else {
+                    statusEl.innerText = `ACTIVE (${Math.round(m.stealth_factor * 100)}% Stealth)`;
+                    statusEl.style.color = 'var(--success)';
+                    statusCard.classList.remove('alert-active');
+                }
+            }
+        }
+
         // Only update these if the security view is active to save resources, 
         // but we'll call renderSecurityCards nonetheless if data is available
         if (d.security) {

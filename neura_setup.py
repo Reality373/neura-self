@@ -324,10 +324,11 @@ async def setup_menu():
         
         console.print(" [bold cyan]1.[/bold cyan] Start NeuraSelf [dim][/dim]")
         console.print(" [bold cyan]2.[/bold cyan] Manage Accounts [yellow](Add/Edit your acc)[/yellow]")
-        console.print(" [bold cyan]3.[/bold cyan] Repair Environment [yellow](Run this,if First time setup)(it install libraries)[/yellow]")
-        console.print(" [bold cyan]4.[/bold cyan] Exit")
+        console.print(" [bold cyan]3.[/bold cyan] Repair Environment [yellow](First time setup)[/yellow]")
+        console.print(" [bold cyan]4.[/bold cyan] Apply Absolute Stealth (v2) [bold green](NEW)[/bold green]")
+        console.print(" [bold cyan]5.[/bold cyan] Exit")
         
-        choice = Prompt.ask("\nchoose : ", choices=["1", "2", "3", "4"], default="1")
+        choice = Prompt.ask("\nchoose : ", choices=["1", "2", "3", "4", "5"], default="1")
         
         if choice == "1":
             console.print("\n[green][*] Running Neura-Self..[/green]")
@@ -340,9 +341,41 @@ async def setup_menu():
         elif choice == "3":
             run_bootstrap()
             input("\nEverything is ready. Press Enter to go back.")
+        elif choice == "4":
+            await apply_stealth_v2()
         else:
             console.print("\n[magenta]Thnkyou for using Neura-Self.[/magenta]")
             break
+
+async def apply_stealth_v2():
+    clean_screen()
+    console.print(neura_Ascii)
+    console.print("[bold white] ABSOLUTE STEALTH MIGRATION (v2) [/bold white]\n")
+    
+    v2_path = os.path.join(state.CONFIG_DIR, 'settings_v2.json')
+    main_path = os.path.join(state.CONFIG_DIR, 'settings.json')
+    
+    if not os.path.exists(v2_path):
+        console.print("[bold red][!] settings_v2.json not found![/bold red]")
+        console.print("[dim]Please ensure Antigravity has generated the v2 template first.[/dim]")
+        time.sleep(2)
+        return
+
+    console.print("[cyan][*] Migrating 32-phase humanization parameters...[/cyan]")
+    try:
+        with open(v2_path, 'r') as f:
+            v2_data = json.load(f)
+        
+        with open(main_path, 'w') as f:
+            json.dump(v2_data, f, indent=4)
+            
+        console.print("\n[bold green][✓] SUCCESS![/bold green]")
+        console.print("[white]Your active settings.json has been updated with the absolute stealth profile.[/white]")
+        console.print("[dim]Every account will now inherit the individual persona and fatigue logic.[/dim]")
+        time.sleep(3)
+    except Exception as e:
+        console.print(f"[bold red][!] Migration failed: {e}[/bold red]")
+        time.sleep(2)
 
 if __name__ == "__main__":
     run_bootstrap()

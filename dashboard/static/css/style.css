@@ -234,6 +234,107 @@ body {
     background: rgba(255, 31, 31, 0.1);
 }
 
+/* Phase 31: Stealth Matrix Styling */
+.stealth-matrix-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin: 20px 0;
+    padding: 0 0;
+}
+
+.stealth-card {
+    background: rgba(10, 10, 12, 0.6);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 62, 62, 0.1);
+    border-radius: 12px;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.3s ease;
+}
+
+.stealth-card:hover {
+    border-color: var(--primary);
+    background: rgba(10, 10, 12, 0.8);
+}
+
+.stealth-card-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 62, 62, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+.stealth-card-data h3 {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.stealth-card-data p {
+    margin: 5px 0 0 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    font-family: var(--font-heading);
+}
+
+.stealth-progress-bg {
+    width: 80px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 2px;
+    margin: 8px 0 4px 0;
+    overflow: hidden;
+}
+
+.stealth-progress-fill {
+    height: 100%;
+    background: var(--primary);
+    box-shadow: 0 0 8px var(--primary);
+    transition: width 0.5s ease;
+}
+
+#stealth-fatigue-txt {
+    font-size: 0.7rem;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+}
+
+#stealth-status-card.alert-active {
+    border-color: var(--warning);
+    background: rgba(245, 158, 11, 0.1);
+    animation: pulseBorder 2s infinite;
+}
+
+@keyframes pulseBorder {
+    0% { border-color: rgba(245, 158, 11, 0.2); }
+    50% { border-color: rgba(245, 158, 11, 0.6); }
+    100% { border-color: rgba(245, 158, 11, 0.2); }
+}
+
+@media (max-width: 1200px) {
+    .stealth-matrix-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .stealth-matrix-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+
 input:focus,
 select:focus,
 textarea:focus {

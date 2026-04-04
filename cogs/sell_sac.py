@@ -107,6 +107,8 @@ class SellSac(commands.Cog):
         if str(message.channel.id) not in [str(c) for c in self.bot.channels]:
             return
 
+        content = self.bot.get_full_content(message)
+
         if "you found:" in content:
             self.loot_count += 1
             if self.loot_count >= self.loot_threshold:

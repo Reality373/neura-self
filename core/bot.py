@@ -94,6 +94,17 @@ class NeuraBot(commands.Bot):
         self.neura_scheduler_task = None
         self.is_busy = False
 
+        # Phase 32: Bot-Specific Stealth Persistence (Multi-Account Isolation)
+        self.is_on_break = False
+        self.last_break_check = time.time()
+        self.break_lock = asyncio.Lock()
+        self.current_break_interval = None
+        self.session_persona = "GRINDER"
+        self.session_mode = "BINGE"
+        self.is_sleeping = False
+        self.circadian_jitter = random.uniform(-0.5, 0.5)
+        self.stress_until = 0.0
+
         
         self.is_mobile = "TERMUX_VERSION" in os.environ or "com.termux" in os.environ.get("PREFIX", "")
         platform = "Mobile (Termux)" if self.is_mobile else "Desktop"
