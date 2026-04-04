@@ -12,6 +12,7 @@
 import time
 import json
 import os
+import re
 from rich.console import Console
 
 class NeuraLogs:
@@ -20,6 +21,15 @@ class NeuraLogs:
         self.log_config = {}
         self.last_logs = {}
         self._load_config()
+        
+        # Phase 32: File Logging (neura_latest.log in root)
+        self.log_path = os.path.join(os.getcwd(), 'neura_latest.log')
+        # Clear log on startup
+        try:
+            with open(self.log_path, 'w', encoding='utf-8') as f:
+                f.write(f"--- Neura-Self Session Started: {time.strftime('%Y-%m-%d %I:%M:%S %p')} ---\n")
+        except:
+            pass
 
     def _load_config(self):
         try:
@@ -64,6 +74,7 @@ class NeuraLogs:
         username = bot.username if hasattr(bot, 'username') else "Bot"
         name_tag = f"[[magenta]{username}[/magenta]] "
         
+        # Console Logging (Rich)
         if log_type == "STEALTH":
             self.console.print(f"{name_tag}[dim]{t}[/dim] [[bold yellow]{log_type}[/bold yellow]]  {message}")
         else:
@@ -73,8 +84,19 @@ class NeuraLogs:
             else:
                 self.console.print(f"\r{name_tag}[dim]{t}[/dim] [[bold {color}]{log_type}[/bold {color}]]  {message}")
 
+        # File Logging (Clean Text)
+        try:
+            # Strip rich tags like [magenta] or [/magenta]
+            clean_msg = re.sub(r'\[/?[a-zA-Z0-9 =_#]+\]', '', message)
+            log_line = f"[{t}] [{log_type}] [{username}] {clean_msg}\n"
+            with open(self.log_path, 'a', encoding='utf-8') as f:
+                f.write(log_line)
+        except Exception as e:
+            pass
+
         import core.state as state
         bot_id = str(bot.user.id) if (hasattr(bot, '_connection') and bot.user) else (getattr(bot, 'user_id', None))
         state.log_command(log_type, message, "info", bot_name=username, bot_id=bot_id)
 
 neura_logger = NeuraLogs()
+

@@ -93,7 +93,8 @@ async def verify_token(token, channel_ids=None):
         return False, "Invalid format", []
     
     import discord
-    client = discord.Client()
+    # Disable unnecessary background tasks for verification to prevent connection resets
+    client = discord.Client(guild_subscriptions=False)
     result = {"valid": False, "user": None, "channels": []}
     
     @client.event
@@ -109,17 +110,24 @@ async def verify_token(token, channel_ids=None):
                         result["channels"].append(cid)
                 except:
                     pass
+        # Graceful cooldown before closing
+        await asyncio.sleep(0.2)
         await client.close()
 
     try:
         await asyncio.wait_for(client.start(token), timeout=30)
-    except asyncio.TimeoutError:
-        await client.close()
-        return False, "Validation Timeout", []
-    except discord.LoginFailure:
-        return False, "Invalid Token", []
-    except Exception as e:
+    except (asyncio.TimeoutError, discord.LoginFailure, Exception) as e:
+        # If the verification succeeded but hit a closing transport error, count it as a win
+        if result["valid"]:
+            return True, result["user"], result["channels"]
+            
+        try: await client.close()
+        except: pass
+        
+        if isinstance(e, asyncio.TimeoutError): return False, "Validation Timeout", []
+        if isinstance(e, discord.LoginFailure): return False, "Invalid Token", []
         return False, f"Error: {str(e)}", []
+
 
     if result["valid"]:
         return True, result["user"], result["channels"]
