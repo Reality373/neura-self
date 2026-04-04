@@ -49,9 +49,14 @@ class SellSac(commands.Cog):
 
                 now = time.time()
                 
+                def get_wait_time(val, default):
+                    if isinstance(val, list):
+                        return random.uniform(val[0], val[1])
+                    return val or default
+
                 if autosell_enabled:
                     if self.next_sell_interval == 0:
-                        base_interval = sell_cfg.get('interval_min', 20) * 60
+                        base_interval = get_wait_time(sell_cfg.get('interval_min', 20), 20) * 60
                         self.next_sell_interval = base_interval * (1 + random.uniform(-0.15, 0.15))
 
                     if now - self.last_sell_time > self.next_sell_interval:
@@ -62,7 +67,7 @@ class SellSac(commands.Cog):
 
                 if autosac_enabled:
                     if self.next_sac_interval == 0:
-                        base_interval = sac_cfg.get('interval_min', 60) * 60
+                        base_interval = get_wait_time(sac_cfg.get('interval_min', 60), 60) * 60
                         self.next_sac_interval = base_interval * (1 + random.uniform(-0.15, 0.15))
 
                     if now - self.last_sac_time > self.next_sac_interval:

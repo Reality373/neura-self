@@ -90,8 +90,12 @@ class Security(commands.Cog):
                     os.system(f'termux-notification --title "{self.notification_title}" --content "{message}"')
                     vib = mobile.get('vibrate', {})
                     if vib.get('enabled', True):
-                        duration = int(vib.get('time', 0.5) * 1000)
+                        raw_time = vib.get('time', 0.5)
+                        if isinstance(raw_time, list):
+                            raw_time = random.uniform(raw_time[0], raw_time[1])
+                        duration = int(raw_time * 1000)
                         os.system(f'termux-vibrate -d {duration}')
+
                     toast = mobile.get('toast', {})
                     if toast.get('enabled', True):
                         bg = toast.get('bg_color', 'black')

@@ -136,8 +136,10 @@ class NeuraCursePray(commands.Cog):
             
             # Phase 17: Social Jitter Startup (45s - 150s)
             startup_offset = random.uniform(45, 150)
-            await self.bot.neura_register_command("cursepray", "curse", priority=3, delay=delay, initial_offset=startup_offset)
+            # Default delay of 360s, will be updated by trigger_action()
+            await self.bot.neura_register_command("cursepray", "curse", priority=3, delay=360, initial_offset=startup_offset)
             self.trigger_action()
+
 
 async def setup(bot):
     cog = NeuraCursePray(bot)

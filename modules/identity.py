@@ -84,12 +84,16 @@ class IdentityManager:
 
         full_visible_text = " ".join(texts)
         if any(pat in full_visible_text for pat in self.generic_patterns):
-            ''' In dm, these are always for us. In guild, we assume they are for us 
-            if we are mentioned or if any of our names appear'''
-            if not message.guild or self.bot.user.mentioned_in(message):
+            # Phase 33: Security Awareness Expansion
+            # If it's a security-critical pattern, we assume it's for us 
+            # if we are in a guild channel we are monitoring.
+            is_security = any(k in full_visible_text for k in ["captcha", "verify", "human", "banned"])
+            if not message.guild or self.bot.user.mentioned_in(message) or is_security:
                 return True
+            
             for ident in clean_idents:
                 if ident in full_visible_text: return True
             return False
+
 
         return False

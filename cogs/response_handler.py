@@ -32,14 +32,29 @@ class ResponseHandler(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
+        if message.author.id == self.bot.user.id: return
+        
+        # Phase 18: Ambient Social Awareness (Bots)
+        if message.author.bot:
+            await self._handle_ambient_social(message)
+            return
+
+        # Basic ambient awareness even in other channels
+        if message.guild and message.channel.id != self.bot.channel_id:
+             if random.random() < 0.0005: 
+                 await self._handle_ambient_social(message)
+             return
+
+        # Process standard responses
         await self._process_response(message)
+        # Handle ambient reactions to human chat
+        await self._handle_ambient_social(message)
 
     @commands.Cog.listener()
     async def on_message_edit(self, before, after):
         await self._process_response(after)
 
     async def _process_response(self, message):
-        if message.author.id == self.bot.user.id: return
         core_config = self.bot.config.get('core', {})
         monitor_id = str(core_config.get('monitor_bot_id', '408785106942164992'))
         if str(message.author.id) != monitor_id: return
@@ -49,7 +64,6 @@ class ResponseHandler(commands.Cog):
         all_channels = [str(c) for c in self.bot.channels]
         if str(message.channel.id) not in all_channels:
             return
-        
 
         full_content = self.bot.get_full_content(message)
         await self._handle_cooldowns(full_content, message)
@@ -85,7 +99,8 @@ class ResponseHandler(commands.Cog):
                 if lq:
                     quotes.append(lq.get_random_quote(5, 50))
                 
-                await self.bot.neura_send(message.channel, random.choice(quotes))
+                # FIX: Removed channel argument from neura_send
+                await self.bot.neura_send(random.choice(quotes))
 
     async def _handle_success(self, content, message):
         now = time.time()
@@ -137,8 +152,6 @@ class ResponseHandler(commands.Cog):
                 self.last_success_time['battle'] = now
                 self.bot.stats['battle_count'] = self.bot.stats.get('battle_count', 0) + 1
                 self.bot.log("SUCCESS", f"Battle confirmed for {self.bot.display_name}")
-        else:
-            pass
 
     async def _handle_cooldowns(self, content, message):
         if "slow down~" in content or "too fast for me" in content:
@@ -174,13 +187,13 @@ class ResponseHandler(commands.Cog):
                      await asyncio.sleep(precision_wait - 2.0)
                      self.bot.log("STEALTH", "Precision Wait: Hovering over keys (Ghost Typing)...")
                      async with message.channel.typing():
-                         await asyncio.sleep(2.0)
+                          await asyncio.sleep(2.0)
                 else:
                      await asyncio.sleep(precision_wait)
                 
                 self.bot.log("STEALTH", f"Precision Hit: Resending '{last_cmd}' exactly on time.")
                 # Force resend without further scheduler overhead
-                await self.bot.neura_send(message.channel, last_cmd)
+                await self.bot.neura_send(last_cmd)
 
             asyncio.create_task(_precision_resend())
             return True
@@ -193,7 +206,6 @@ class ResponseHandler(commands.Cog):
             self.bot.throttle_until = max(self.bot.throttle_until, time.time() + wait)
             self.bot.log("STEALTH", f"Command failed. Human is confused/checking reasons, pausing {round(wait, 1)}s.")
             return True
-        pass
 
     async def _handle_ambient_social(self, message):
         """Phase 18: Conversational Mimicry (GG/lol reactions)"""
@@ -214,21 +226,6 @@ class ResponseHandler(commands.Cog):
                     self.bot.log("STEALTH", f"Ambient Mimicry: Reacting with '{filler}'")
                     await self.bot.neura_send(filler)
                     break
-
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        if message.author.id == self.bot.user.id: return
-        if message.author.bot: 
-            await self._handle_ambient_social(message)
-            return
-
-        if message.guild and message.channel.id != self.bot.channel_id:
-             # Basic ambient awareness even in other channels
-             if random.random() < 0.0005: 
-                 await self._handle_ambient_social(message)
-             return
-
-        await self._handle_ambient_social(message)
 
 async def setup(bot):
     cog = ResponseHandler(bot)

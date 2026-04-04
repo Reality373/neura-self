@@ -58,8 +58,14 @@ class NeuraHuman:
         
         hb_cfg = stealth_cfg.get('human_break', {})
         hb_enabled = hb_cfg.get('enabled', True)
-        hb_duration = hb_cfg.get('duration_min', 10) * 60
-        hb_base_interval = hb_cfg.get('interval_min', 45) * 60
+        
+        def get_val(v, default=10):
+            if isinstance(v, list):
+                return random.uniform(v[0], v[1])
+            return v
+
+        hb_duration = get_val(hb_cfg.get('duration_min', 10), 10) * 60
+        hb_base_interval = get_val(hb_cfg.get('interval_min', 45), 45) * 60
         
         if bot.current_break_interval is None:
             bot.current_break_interval = hb_base_interval * (1 + random.uniform(-0.15, 0.15))

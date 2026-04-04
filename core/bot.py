@@ -19,6 +19,7 @@ import asyncio
 import re
 import sys
 import requests
+import core.state as state
 from modules.neura_human import NeuraHuman
 from modules.neura_logs import neura_logger
 from modules.identity import IdentityManager
@@ -432,8 +433,14 @@ class NeuraBot(commands.Bot):
                     old_dur = hb_cfg.get('duration_min', 14)
                     
                     # Apply +/- 15% random jitter to settings IN MEMORY
-                    hb_cfg['interval_min'] = int(old_int * random.uniform(0.85, 1.15))
-                    hb_cfg['duration_min'] = int(old_dur * random.uniform(0.85, 1.15))
+                    def get_jittered(val):
+                        if isinstance(val, list):
+                            # Pick a random point in range first
+                            val = random.uniform(val[0], val[1])
+                        return int(val * random.uniform(0.85, 1.15))
+
+                    hb_cfg['interval_min'] = get_jittered(old_int)
+                    hb_cfg['duration_min'] = get_jittered(old_dur)
                     
                     self.log("STEALTH", f"Settings Jitter: Human stamina profile randomized (Interval: {hb_cfg['interval_min']}m, Duration: {hb_cfg['duration_min']}m)")
                 
