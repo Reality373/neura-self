@@ -57,23 +57,25 @@ class AutoOpen(commands.Cog):
 
         if ("received a" in lower or "found a" in lower) and "weapon crate" in lower:
             if use_crate and time.time() >= self.cooldowns['crate']:
-                self.cooldowns['crate'] = time.time() + 10
-                await asyncio.sleep(1.2)
+                self.cooldowns['crate'] = time.time() + random.uniform(8, 12)
+                await asyncio.sleep(random.uniform(3.0, 7.0))
                 await self._send_cmd("crate")
 
         if ("received a" in lower or "found a" in lower) and "lootbox" in lower:
             if use_lootbox and time.time() >= self.cooldowns['lootbox']:
-                self.cooldowns['lootbox'] = time.time() + 10
-                await asyncio.sleep(1.2)
+                self.cooldowns['lootbox'] = time.time() + random.uniform(8, 12)
+                await asyncio.sleep(random.uniform(3.0, 7.0))
                 await self._send_cmd("lootbox")
 
         if "you don't have any lootboxes" in lower or "no lootboxes" in lower:
-            self.cooldowns['lootbox'] = time.time() + 3600
-            self.bot.log("COOLDOWN", "Lootbox not available. Pausing 1h.")
+            # Phase 11: Randomized cooldown (50-70m)
+            self.cooldowns['lootbox'] = time.time() + random.uniform(3000, 4200)
+            self.bot.log("COOLDOWN", "Lootbox not available. Pausing ~1h.")
 
         if "you don't have any crates" in lower or "no weapon crates" in lower:
-            self.cooldowns['crate'] = time.time() + 86400
-            self.bot.log("COOLDOWN", "Crate not available. Pausing 24h.")
+            # Phase 11: Randomized cooldown (22-26h)
+            self.cooldowns['crate'] = time.time() + random.uniform(79200, 93600)
+            self.bot.log("COOLDOWN", "Crate not available. Pausing ~24h.")
 
         if "resets in" in lower and "weapon crate" in lower:
             h = re.search(r'(\d+)\s*h', lower)

@@ -15,7 +15,10 @@ QWERTY_MAP = {
 }
 
 async def apply_typo_logic(chars, i, mistake_rate, lazy_typo_rate, typo_count):
-    if isinstance(mistake_rate, (int, float)) and random.random() < mistake_rate and i < len(chars) - 1:
+    calc_mistake = (mistake_rate / 100.0) if isinstance(mistake_rate, (int, float)) else 0.07
+    calc_lazy = (lazy_typo_rate / 100.0) if isinstance(lazy_typo_rate, (int, float)) else 0.02
+    
+    if random.random() < calc_mistake and i < len(chars) - 1:
         target_char = chars[i].lower()
         if target_char in QWERTY_MAP:
             typo_char = random.choice(QWERTY_MAP[target_char])
@@ -23,7 +26,7 @@ async def apply_typo_logic(chars, i, mistake_rate, lazy_typo_rate, typo_count):
             typo_char = random.choice('abcdefghijklmnopqrstuvwxyz')
         
         typo_count += 1
-        if random.random() < lazy_typo_rate:
+        if random.random() < calc_lazy:
             chars[i] = typo_char  
         else:
             await asyncio.sleep(random.uniform(0.1, 0.2)) 

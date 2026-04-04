@@ -1,0 +1,82 @@
+{
+    "_comment_core": "The core settings required for the bot to run and identify itself.",
+    "core": {
+        "prefix": "owo ",
+        "_comment_prefix": "The default prefix. Change to e.g. 'alias ' if using an alias bot. (Default: 'owo ')",
+        
+        "user_id": "YOUR_DISCORD_USER_ID_HERE",
+        "monitor_bot_id": "408785106942164992"
+    },
+    
+    "_comment_stealth": "Controls modular human-like behaviors to stay under the radar.",
+    "stealth": {
+        
+        "_comment_human_break": "Controls generic activity pausing. If on, it halts farming explicitly.",
+        "human_break": {
+            "enabled": true,
+            "duration_min": 10,
+            "_comment_duration": "How long the break lasts in minutes. (Default: 10)",
+            "interval_min": 45,
+            "_comment_interval": "Triggers a break every X minutes. (Default: 45)"
+        },
+        
+        "_comment_typing": "Natively mimics raw Discord keystroke delays.",
+        "typing": {
+            "enabled": true,
+            "reaction_min": 1.0,
+            "reaction_max": 3.0,
+            "_comment_reaction": "Base wait time (seconds) before starting to type. (Default: min 1.0, max 3.0)",
+            "mistake_rate": 7,
+            "_comment_mistake": "Percent chance to mistype an adjacent QWERTY key. (Default: 7)",
+            "lazy_typo_rate": 2,
+            "_comment_lazy": "Percent chance that if a mistake is made, to NOT backspace it. Submits the typo raw. (Default: 2)",
+            "extra_delay": 0
+        },
+        
+        "_comment_circadian": "Simulates going to bed. The bot completely shuts down during these hours.",
+        "circadian_rhythm": {
+            "enabled": true,
+            "sleep_start": 1,
+            "_comment_start": "The local hour it goes to sleep in 24h. (Default: 1)",
+            "sleep_end": 8,
+            "_comment_end": "The local hour it wakes up in 24h. (Default: 8)"
+        },
+        
+        "_comment_syntax": "Alters the command string to disrupt algorithm pattern recognition.",
+        "syntax_variance": {
+            "enabled": true,
+            "capitalization_rate": 15,
+            "_comment_cap": "Chance (%) to erroneously upper-case a letter like 'oWo hunt'. (Default: 15)",
+            "space_rate": 10,
+            "_comment_space": "Chance (%) to accidentally hit the spacebar twice like 'owo  hunt'. (Default: 10)"
+        },
+        
+        "_comment_curiosity": "Injects irrelevant commands like reading balance to break predictive farming sequences.",
+        "curiosity": {
+            "enabled": true,
+            "commands": ["owo cash", "owo inv", "owo zoo", "owo profile"],
+            "trigger_min": 100,
+            "trigger_max": 250,
+            "_comment_trigger": "It will send one of the commands randomly between your X and Y farming command. (Default: min 100, max 250)"
+        },
+        
+        "_comment_fatigue": "Simulates annoyance and fatigue after resolving a captcha verification.",
+        "post_captcha_fatigue": {
+            "enabled": true,
+            "delay_min": 30.0,
+            "delay_max": 120.0,
+            "_comment_delay": "Stops all farming for X to Y seconds immediately after beating a captcha. (Default: min 30.0, max 120.0)"
+        }
+    },
+    
+    "commands": {
+        "hunt": {
+            "enabled": true,
+            "use_shortform": false
+        },
+        "battle": {
+            "enabled": true,
+            "use_shortform": false
+        }
+    }
+}

@@ -27,7 +27,7 @@ class Gambling(commands.Cog):
         side = cfg.get('side', 'h')
         
         self.bot.cmd_states['coinflip']['content'] = f"cf {side} {amount}"
-        self.bot.cmd_states['coinflip']['delay'] = random.uniform(30, 60)
+        self.bot.cmd_states['coinflip']['delay'] = random.uniform(45, 180) # Phase 9: Relaxed gambling
         state.stats['coinflip_count'] = state.stats.get('coinflip_count', 0) + 1
 
     def trigger_slots(self):
@@ -35,7 +35,7 @@ class Gambling(commands.Cog):
         amount = cfg.get('amount', 1)
         
         self.bot.cmd_states['slots']['content'] = f"slots {amount}"
-        self.bot.cmd_states['slots']['delay'] = random.uniform(25, 50)
+        self.bot.cmd_states['slots']['delay'] = random.uniform(45, 180) # Phase 9: Relaxed gambling
         state.stats['slots_count'] = state.stats.get('slots_count', 0) + 1
 
     async def register_actions(self):

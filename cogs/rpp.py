@@ -44,10 +44,12 @@ class RPP(commands.Cog):
             self.bot.log("SYS", "RPP Module configured.")
             interval = cfg.get('interval_s', 60)
             
-            def rpp_dispatch():
+            async def rpp_dispatch():
+                # Phase 15: RPP Deliberation Pause
+                await asyncio.sleep(random.uniform(1.2, 3.5))
                 return self.trigger_action()
                 
-            await self.bot.neura_register_command("rpp", rpp_dispatch, priority=3, delay=interval, initial_offset=15)
+            await self.bot.neura_register_command("rpp", rpp_dispatch, priority=3, delay=interval, initial_offset=random.uniform(15, 60))
 
     @commands.Cog.listener()
     async def on_message(self, message):
@@ -63,18 +65,19 @@ class RPP(commands.Cog):
         full_text = self.bot.get_full_content(message)
         
         if "too tired to run" in full_text:
-            self.command_availability["run"] = time.time() + 86400
-            self.bot.log("COOLDOWN", "RPP: run exhausted. Next available tomorrow....")
+            # Phase 15: RPP Exhaustion Jitter (22.5 - 26.5h)
+            self.command_availability["run"] = time.time() + random.uniform(81000, 95400)
+            self.bot.log("COOLDOWN", f"RPP: run exhausted. Next available ~24h (jittered).")
             return
         
         if "garden is out of carrots" in full_text:
-            self.command_availability["piku"] = time.time() + 86400
-            self.bot.log("COOLDOWN", "RPP: piku exhausted (no carrots). Next available tomorrow..")
+            self.command_availability["piku"] = time.time() + random.uniform(81000, 95400)
+            self.bot.log("COOLDOWN", "RPP: piku exhausted (no carrots). Next available ~24h (jittered).")
             return
  
         if "no puppies" in full_text:
-            self.command_availability["pup"] = time.time() + 86400
-            self.bot.log("COOLDOWN", "RPP: pup exhausted (no puppies). Next available tomorrow...")
+            self.command_availability["pup"] = time.time() + random.uniform(81000, 95400)
+            self.bot.log("COOLDOWN", "RPP: pup exhausted (no puppies). Next available ~24h (jittered).")
             return
 
         if not self.bot.is_message_for_me(message):
@@ -83,8 +86,9 @@ class RPP(commands.Cog):
         for cmd in ["run", "pup", "piku"]:
             if f":9{cmd}" in content or f"o {cmd}" in content:
                  if "tomorrow" in content or "too many" in content:
-                    self.command_availability[cmd] = time.time() + 86400
-                    self.bot.log("COOLDOWN", f"RPP: {cmd} exhausted. Next available tomorrow.")
+                    # Phase 15: Stamina Jitter
+                    self.command_availability[cmd] = time.time() + random.uniform(81000, 95400)
+                    self.bot.log("COOLDOWN", f"RPP: {cmd} exhausted. Next available ~24h (jittered).")
 
 async def setup(bot):
     cog = RPP(bot)

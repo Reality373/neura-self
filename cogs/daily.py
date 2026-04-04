@@ -54,11 +54,12 @@ class Daily(commands.Cog):
         self.bot.log("INFO", "Sending daily command...")
         self.last_daily_sent = time.time()
         self.last_run = time.time()
-        self.cooldown = 86400 
+        # Phase 15: Daily Reset Jitter (24h +/- 90m)
+        self.cooldown = 86400 + random.randint(-5400, 5400)
         self._save_last_run(self.last_run)
         
         if 'daily' in self.bot.cmd_states:
-             self.bot.cmd_states['daily']['delay'] = 86400
+             self.bot.cmd_states['daily']['delay'] = self.cooldown
 
     async def register_actions(self):
         cfg = self.bot.config.get('commands', {}).get('daily', {})
@@ -67,11 +68,11 @@ class Daily(commands.Cog):
             remaining = last_run + 86400 - time.time()
             
             if remaining <= 0:
-                delay = 3
+                delay = random.uniform(60, 300) # Phase 6: Staggered startup
             else:
                 delay = remaining
                 
-            await self.bot.neura_register_command("daily", "daily", priority=4, delay=max(10, delay), initial_offset=0)
+            await self.bot.neura_register_command("daily", "daily", priority=4, delay=max(10, delay), initial_offset=random.uniform(60, 180))
 
     @commands.Cog.listener()
     async def on_message(self, message):

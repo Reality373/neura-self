@@ -18,6 +18,7 @@ class NeuraHuman:
     last_break_check = time.time()
     break_lock = asyncio.Lock()
     is_on_break = False
+    current_interval = None
 
     @staticmethod
     async def neura_send(bot, channel, content):
@@ -35,11 +36,36 @@ class NeuraHuman:
             bot.log("STEALTH", "Waiting for existing break to finish...")
             while NeuraHuman.is_on_break:
                 await asyncio.sleep(1)
+
+        # Phase 23: Post-Captcha Stress Scaling
+        # Humans are 'on edge' after a captcha, increasing distraction chances.
+        stress_active = time.time() < getattr(bot, 'stress_until', 0)
+        
+        # Phase 18: Burnout scaling (Distraction chance)
+        session_duration = time.time() - bot.start_time
+        lurk_chance = 0.02
+        if session_duration > 14400: # 4 Hours
+            lurk_chance = 0.10
+        
+        if stress_active:
+             lurk_chance *= 3 # 3x distraction chance while stressed
+             if random.random() < 0.001:
+                  bot.log("STEALTH", "Stress Logic: Human is nervous after captcha. Skips increased.")
+                 
+        if random.random() < lurk_chance:
+            lurk_duration = random.randint(60, 180)
+            bot.log("STEALTH", f"Lurking (Stress={stress_active}): Human is distracted for {lurk_duration}s...")
+            await asyncio.sleep(lurk_duration)
         
         hb_cfg = stealth_cfg.get('human_break', {})
         hb_enabled = hb_cfg.get('enabled', True)
         hb_duration = hb_cfg.get('duration_min', 10) * 60
-        hb_interval = hb_cfg.get('interval_min', 45) * 60
+        hb_base_interval = hb_cfg.get('interval_min', 45) * 60
+        
+        if NeuraHuman.current_interval is None:
+            NeuraHuman.current_interval = hb_base_interval * (1 + random.uniform(-0.15, 0.15))
+            
+        hb_interval = NeuraHuman.current_interval
 
         runtime = time.time() - NeuraHuman.last_break_check
         if hb_enabled and runtime > hb_interval: 
@@ -47,7 +73,7 @@ class NeuraHuman:
                 if time.time() - NeuraHuman.last_break_check > hb_interval and not NeuraHuman.is_on_break:
                     NeuraHuman.is_on_break = True
                     start_break_time = time.time()
-                    bot.log("STEALTH", f"Pausing for {int(hb_duration/60)}mins for human behaviour (Break Time)")
+                    bot.log("STEALTH", f"Pausing for {int(hb_duration/60)}mins (Break Time)")
                     try:
                         while NeuraHuman.is_on_break:
                             curr_stealth = bot.config.get('stealth', {})
@@ -65,13 +91,17 @@ class NeuraHuman:
                     finally:
                         NeuraHuman.last_break_check = time.time()
                         NeuraHuman.is_on_break = False
+                        NeuraHuman.current_interval = hb_base_interval * (1 + random.uniform(-0.15, 0.15))
                         set_session_mode(random.choices(['BINGE', 'CASUAL'], weights=[0.4, 0.6])[0])
-                        bot.log("STEALTH", f"Break finished. Resuming operations. Session mode: {get_session_mode()}")
+                        bot.log("STEALTH", f"Break finished. Simulating app warmup (5-12s)...")
+                        await asyncio.sleep(random.uniform(5.0, 12.0))
+                        bot.log("STEALTH", f"Warmup finished. Resuming operations. Session mode: {get_session_mode()}")
                 elif NeuraHuman.is_on_break:
                      while NeuraHuman.is_on_break:
                         await asyncio.sleep(1)
                         
-        if get_session_mode() == 'CASUAL':
+        if get_session_mode() == 'CASUAL' or stress_active:
+            # If stressed, adds extra 1-5s hesitation even in BINGE mode
             casual_delay = random.uniform(1.0, 5.0)
             await asyncio.sleep(casual_delay)
 
@@ -89,18 +119,55 @@ class NeuraHuman:
         reaction_min = config.get('reaction_min', 1.0)
         reaction_max = config.get('reaction_max', 3.0)
         mistake_rate = config.get('mistake_rate', 5)
-        extra_delay = config.get('extra_delay', 0)
-        lazy_typo_rate = config.get('lazy_typo_rate', 1)
         
-        if isinstance(mistake_rate, (int, float)) and mistake_rate > 1:
-            mistake_rate /= 100.0
-        if isinstance(lazy_typo_rate, (int, float)) and lazy_typo_rate > 1:
-            lazy_typo_rate /= 100.0
+        # Phase 22: Platform-Specific Behavior Multipliers
+        # Mobile users are slower and sloppier.
+        platform_delay_mult = 1.0
+        platform_error_mult = 1.0
+        if bot.is_mobile:
+            platform_delay_mult = 1.3
+            platform_error_mult = 1.2
+            
+        # Phase 20: Mood/Intensity-Based Reaction Scaling
+        intensity_factor = 1.0
+        from modules.stealth_circadian import get_session_mode
+        mode = get_session_mode()
+        
+        if mode == 'BINGE':
+            intensity_factor = 0.7 # Faster reactions (0.7x delay)
+            mistake_rate = mistake_rate * 2 * platform_error_mult # 2x typo rate
+        elif mode == 'CASUAL':
+            intensity_factor = 1.3 # Slower, deliberate
+            mistake_rate = mistake_rate * 0.5 * platform_error_mult # Lower typo rate
+        else:
+            mistake_rate = mistake_rate * platform_error_mult
+            
+        # Phase 7: Determine fatigue overhead (up to 0.5s increase after 4h)
+        session_duration = time.time() - getattr(bot, 'start_time', time.time())
+        fatigue_factor = min(0.5, (session_duration / 14400) * 0.5) 
 
-        reaction_time = random.uniform(reaction_min if isinstance(reaction_min, (int, float)) else 1.0, 
-                                       reaction_max if isinstance(reaction_max, (int, float)) else 3.0)
+        reaction_time = (random.uniform(reaction_min, reaction_max) * intensity_factor * platform_delay_mult)
+        
+        # Phase 22: Desktop Window Focus Delay (2-5s)
+        # First message after a long break or startup on Desktop
+        if not bot.is_mobile and time.time() - getattr(bot, 'last_sent_time', 0) > 600:
+             refocus_delay = random.uniform(2, 5)
+             reaction_time += refocus_delay
+             bot.log("STEALTH", f"Desktop: Simulating window refocus delay (+{round(refocus_delay, 1)}s)")
+        
+        # Apply fatigue to initial reaction
+        reaction_time += fatigue_factor
+
         if reaction_time > 0.1:
             await asyncio.sleep(reaction_time)
+
+        # Phase 22: Desktop Clipboard Pasting (70% chance for long content)
+        if not bot.is_mobile and len(content) > 15 and random.random() < 0.70:
+             paste_delay = random.uniform(1.2, 2.5)
+             await asyncio.sleep(paste_delay)
+             bot.log("STEALTH", "Desktop: Simulating clipboard paste (instant send).")
+             await channel.send(content)
+             return True
 
         try:
             async with channel.typing():
@@ -110,18 +177,35 @@ class NeuraHuman:
                 
                 start_time = time.time()
                 
+                burst_count = 0
+                max_burst = random.randint(2, 4)
+                
                 while i < len(chars):
-                    bot_paused = getattr(bot, 'paused', False)
-                    if bot_paused:
-                        return False
                     char = chars[i]
-                    delay = random.uniform(0.02, 0.08)
-                    if char in ".,!?;": delay += random.uniform(0.1, 0.2)
                     
+                    # Determine delay for this character
+                    if burst_count < max_burst:
+                        delay = random.uniform(0.01, 0.03) # fast burst
+                        burst_count += 1
+                    else:
+                        delay = random.uniform(0.1, 0.25) # human pause after burst
+                        burst_count = 0
+                        max_burst = random.randint(2, 4)
+
+                    if char in ".,!?;": delay += random.uniform(0.2, 0.4)
+                    
+                    # Handle typos and visible corrections (Phase 9)
+                    old_char = chars[i]
                     typo_count = await apply_typo_logic(chars, i, mistake_rate, lazy_typo_rate, typo_count)
+                    
+                    if chars[i] == old_char and random.random() < 0.15:
+                        # simulate a "near miss" (backspace and fix)
+                        await asyncio.sleep(random.uniform(0.4, 0.8))
 
                     await asyncio.sleep(delay)
                     i += 1
+                    
+
                 
                 final_content = "".join(chars)
                 enter_delay = random.uniform(0.3, 0.7) + (random.uniform(0, extra_delay) if isinstance(extra_delay, (int, float)) and extra_delay > 0 else 0)

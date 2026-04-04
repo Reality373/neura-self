@@ -20,9 +20,9 @@ class ChannelSwitch(commands.Cog):
         self.active = True
         self.task = None
         
-    def trigger_switch(self):
+    async def trigger_switch(self):
         cfg = self.bot.config.get('utilities', {}).get('autochannel', {})
-        interval_config = cfg.get('cooldown', [300, 350])
+        interval_config = cfg.get('cooldown', [1200, 3600]) # 20-60 minutes
         
         if isinstance(interval_config, list) and len(interval_config) == 2:
             interval = random.uniform(interval_config[0], interval_config[1])
@@ -34,7 +34,6 @@ class ChannelSwitch(commands.Cog):
             return
 
         channels = self.bot.channels if (hasattr(self.bot, 'channels') and self.bot.channels) else cfg.get('channels', [])
-
         
         if len(channels) >= 2:
             current = str(self.bot.channel_id)
@@ -45,13 +44,15 @@ class ChannelSwitch(commands.Cog):
                 self.bot.log("SYS", f"ChannelSwitch: Rotated to channel {next_chan}")
         
         if 'channelswitch' in self.bot.cmd_states:
+             # Phase 16: ChannelSwitch Decision Pause
+             await asyncio.sleep(random.uniform(4.0, 10.0))
              self.bot.cmd_states['channelswitch']['delay'] = interval
 
     async def register_actions(self):
         cfg = self.bot.config.get('utilities', {}).get('autochannel', {})
         if cfg.get('enabled', False):
             self.bot.log("SYS", "ChannelSwitch Module configured.")
-            interval_config = cfg.get('cooldown', [300, 350])
+            interval_config = cfg.get('cooldown', [1200, 3600])
             if isinstance(interval_config, list) and len(interval_config) == 2:
                 interval = random.uniform(interval_config[0], interval_config[1])
             else:

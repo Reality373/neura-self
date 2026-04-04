@@ -48,6 +48,16 @@ class Others(commands.Cog):
                     if hasattr(comp, 'children'):
                         btn = comp.children[0]
                         if not btn.disabled:
+                            # Phase 13: Rule Reading Delay (4-10s)
+                            # Phase 28: Rule Scanning Expansion (3.0s - 12.0s)
+                            scanning_delay = random.uniform(3.0, 12.0)
+                            
+                            # Additional delay for long rule sets (10% chance)
+                            if random.random() < 0.10:
+                                scanning_delay += 2.0
+                                
+                            self.bot.log("STEALTH", f"Rule Acceptance: User is scanning rules ({round(scanning_delay, 1)}s)...")
+                            await asyncio.sleep(scanning_delay)
                             await btn.click()
                             self.bot.log("SUCCESS", "Auto-Accepted OwO Rules")
                 except Exception as e:
@@ -89,12 +99,17 @@ class Others(commands.Cog):
                 pass
 
 
-        elif "you do not have an active battle team" in content:
             if not self.bot.is_message_for_me(message):
                 return
+            
+            # Phase 28: Zoo Deliberation (4s - 10s)
+            deliberation = random.uniform(4.0, 10.0)
+            self.bot.log("STEALTH", f"Broken Team: User is deciding which animals to add ({round(deliberation, 1)}s)...")
+            await asyncio.sleep(deliberation)
+            
             self.zoo = True
             await self.bot.neura_enqueue("zoo", priority=2)
-            self.bot.log("SYS", "Zoo triggered")
+            self.bot.log("SYS", "Zoo triggered (Team Setup)")
 
         elif "'s zoo! **" in content and self.zoo:
             if not self.bot.is_message_for_me(message, role="header"):
@@ -103,9 +118,20 @@ class Others(commands.Cog):
             animals.reverse()
             self.zoo = False
             
+            # Phase 28: Animal Selection Variance (Favorites)
+            # 20% chance to pick random animals instead of the first 3
+            if random.random() < 0.20:
+                 random.shuffle(animals)
+                 self.bot.log("STEALTH", "Team Mgmt: Picking 'favorite' animals instead of the best.")
+
             for i in range(min(len(animals), 3)):
+                # Phase 28: Weighted Reaction Layer (3s - 8s)
+                # Simulates typing out individual names from zoo list
+                reaction_delay = random.uniform(3.0, 8.0)
+                await asyncio.sleep(reaction_delay)
+                
                 await self.bot.neura_enqueue(f"team add {animals[i]}", priority=2)
-                self.bot.log("CMD", f"Added animal: {animals[i]}")
+                self.bot.log("CMD", f"Team Mgmt: Added animal: {animals[i]}")
 
     async def register_actions(self):
         pass

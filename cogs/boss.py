@@ -185,7 +185,7 @@ class Boss(commands.Cog):
 
         self.bot.log("BOSS", f"Boss Battle detected (ID: {tracking_id})! Attempting join...")
         
-        await asyncio.sleep(random.uniform(0.5, 1.5))
+        await asyncio.sleep(random.uniform(2.0, 5.0))
         
         if self.bot.paused:
             return

@@ -22,7 +22,7 @@ class HuntBot(commands.Cog):
         self.bot = bot
         self.active = True
         self.last_check = 0.0
-        self.check_interval = 900
+        self.check_interval = random.randint(810, 990) # 13.5 - 16.5 mins
         self.task = None
         self.password_reset_regex = r"(?<=Password will reset in )(\d+)"
         self.huntbot_time_regex = r"(\d+)([DHM])"
@@ -45,7 +45,9 @@ class HuntBot(commands.Cog):
         cfg = self.bot.config.get('commands', {}).get('huntbot', {})
         if cfg.get('enabled', False):
             self.bot.log("SYS", "HuntBot Module configured.")
-            await self.bot.neura_register_command("huntbot", "huntbot 16000", priority=4, delay=900, initial_offset=20)
+            # Phase 13: HuntBot Interval Jitter (900s +/- 10%)
+            delay = random.uniform(810, 990)
+            await self.bot.neura_register_command("huntbot", "huntbot 16000", priority=4, delay=delay, initial_offset=random.uniform(45, 120))
             self.trigger_action()
 
     @commands.Cog.listener()
@@ -165,13 +167,14 @@ class HuntBot(commands.Cog):
                 elif unit == "D": total_seconds += int(amount) * 86400
             
             if found:
-                self.check_interval = total_seconds + 30
+                # Phase 13: Busy-Wait Jitter
+                self.check_interval = total_seconds + random.uniform(20, 60)
                 self.last_check = time.time()
                 if 'huntbot' in self.bot.cmd_states:
                     self.bot.cmd_states['huntbot']['delay'] = self.check_interval
                     self.bot.cmd_states['huntbot']['last_ran'] = time.time()
                 self.bot.is_busy = False
-                self.bot.log("AutoHunt", f"HuntBot busy. Resyncing for {round(total_seconds/60)}m")
+                self.bot.log("AutoHunt", f"HuntBot busy. Resyncing for {round(self.check_interval/60, 1)}m")
 
         elif "i am back with" in content_lower or "beep boop. i am back with" in content_lower:
             rewards = content.split('back with')[-1].strip().upper() if 'back with' in content_lower else "UNKNOWN REWARDS"

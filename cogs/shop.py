@@ -49,6 +49,13 @@ class Shop(commands.Cog):
                 await self.bot.neura_enqueue("owo cash", priority=3)
             return
 
+        # Phase 27: Economic Verification (20% chance)
+        # Check cash balance 5-10 seconds before buying
+        if random.random() < 0.20:
+             self.bot.log("STEALTH", "Economic Logic: Checking balance before purchase...")
+             await self.bot.neura_enqueue("owo cash", priority=3)
+             await asyncio.sleep(random.uniform(5.0, 10.0))
+
         self._pending_cash_check = False
         item_id = random.choice(valid_items)
         price = self.cash_required.get(item_id, 0)
@@ -98,10 +105,17 @@ class Shop(commands.Cog):
                     self.bot.log("SUCCESS", f"Shop: Bought item. Balance updated: -{price} cowoncy")
 
     async def _sync_balance(self):
-        """Periodically send 'owo cash' to keep the balance up to date."""
+        """Phase 19: Economic Awareness (Pre-Sync Balance Check)"""
         cnf = self.bot.config.get('commands', {}).get('shop', {})
         if not cnf.get('enabled', False):
             return
+            
+        # 5% chance to check cash balance specifically (rather than just sync)
+        if random.random() < 0.05:
+            self.bot.log("STEALTH", "Economic Logic: Checking balance before sync...")
+            await self.bot.neura_enqueue("owo cash", priority=3)
+            await asyncio.sleep(random.uniform(3, 7))
+        
         self.bot.log("Shop", "Auto-syncing balance via 'owo cash'...")
         await self.bot.neura_enqueue("owo cash", priority=3)
 
@@ -121,8 +135,9 @@ class Shop(commands.Cog):
                 "shop_cash_sync",
                 self._sync_balance,
                 priority=3,
-                delay=7200,
-                initial_offset=30
+                # Phase 19: Randomized Shop Sync (9h - 15h, avg 12h)
+                delay=random.randint(32400, 54000),
+                initial_offset=random.randint(300, 900)
             )
 
 async def setup(bot):

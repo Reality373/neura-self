@@ -1,7 +1,8 @@
 {
     "core": {
         "monitor_bot_id": "408785106942164992",
-        "prefix": "owo "
+        "prefix": "owo ",
+        "human_stealth_factor": 0.5
     },
     "commands": {
         "owo": {
@@ -176,7 +177,13 @@
             "reaction_max": 2,
             "reaction_min": 1,
             "typos": true
-        }
+        },
+        "circadian_rhythm": {
+            "enabled": true,
+            "sleep_start": 1,
+            "sleep_end": 8
+        },
+        "force_persona": "auto"
     },
     "reactionBot": {
         "enabled": false,

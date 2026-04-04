@@ -158,12 +158,10 @@ class NeuraGems(commands.Cog):
                         if state.checking_gems.get(self.bot.user_id):
                             return
 
-                        self.bot.log("SYS", "[NeuraGems] No active gems detected! Triggering inventory check.")
-                        state.checking_gems[self.bot.user_id] = {
-                            "time": time.time(),
-                            "types": actually_missing
-                        }
                         self.last_inv_time = now
+                        
+                        self.bot.log("SYS", "[NeuraGems] No active gems. Human is checking inventory...")
+                        await asyncio.sleep(random.uniform(6.0, 15.0))
                         await self.bot.neura_enqueue("owo inv", priority=2)
             return
 
@@ -208,18 +206,33 @@ class NeuraGems(commands.Cog):
             if type_cfg.get('specialGem', False) and "specialGem" not in active_gems: missing_types.append("specialGem")
 
             if missing_types:
-                actually_missing = [t for t in missing_types if t not in state.missing_gems_cache.get(self.bot.user_id, [])]
+                actually_missing = [t for t in missing_types if t not in [g['name'] if isinstance(g, dict) else g for g in state.missing_gems_cache.get(self.bot.user_id, [])]]
                 
                 if actually_missing:
-                    if state.checking_gems.get(self.bot.user_id):
-                        return
-
-                    self.bot.log("SYS", f"[NeuraGems] Active gems detected, but missing: {', '.join(actually_missing)}. Checking inventory...")
-                    state.checking_gems[self.bot.user_id] = {
-                        "time": time.time(),
-                        "types": actually_missing
-                    }
-                    await self.bot.neura_enqueue("owo inv", priority=2)
+                    # Phase 11: Clear old missing gems from cache (1h TTL)
+                    cached_missing = state.missing_gems_cache.get(self.bot.user_id, [])
+                    now = time.time()
+                    state.missing_gems_cache[self.bot.user_id] = [
+                        g for g in cached_missing 
+                        if not isinstance(g, dict) or (now - g.get('time', 0)) < 3600
+                    ]
+                    
+                    # Convert to simple list for checking
+                    current_missing_names = [g['name'] if isinstance(g, dict) else g for g in state.missing_gems_cache[self.bot.user_id]]
+                    
+                    final_missing = [t for t in actually_missing if t not in current_missing_names]
+                    
+                    if final_missing:
+                        if state.checking_gems.get(self.bot.user_id):
+                            return
+                        
+                        self.bot.log("SYS", f"[NeuraGems] Gems missing: {', '.join(final_missing)}. Checking inventory...")
+                        state.checking_gems[self.bot.user_id] = {
+                            "time": time.time(),
+                            "types": final_missing
+                        }
+                        await asyncio.sleep(random.uniform(6.0, 15.0))
+                        await self.bot.neura_enqueue("owo inv", priority=2)
                 else:
                     pass
             return
@@ -269,17 +282,22 @@ class NeuraGems(commands.Cog):
                             break
                     
                     if has_any:
-                        if g_type in state.missing_gems_cache[self.bot.user_id]:
-                            state.missing_gems_cache[self.bot.user_id].remove(g_type)
-                            self.bot.log("SYS", f"[NeuraGems] {g_type} found in inventory, removed from missing cache.")
+                        # Clear from cache
+                        state.missing_gems_cache[self.bot.user_id] = [g for g in state.missing_gems_cache[self.bot.user_id] if (g['name'] if isinstance(g, dict) else g) != g_type]
+                        self.bot.log("SYS", f"[NeuraGems] {g_type} found in inventory, removed from missing cache.")
                     else:
-                        if g_type not in state.missing_gems_cache[self.bot.user_id]:
-                            state.missing_gems_cache[self.bot.user_id].append(g_type)
-                            self.bot.log("WARN", f"[NeuraGems] {g_type} not found in inventory, added to missing cache.")
+                        # Add to cache with timestamp
+                        current_missing_names = [g['name'] if isinstance(g, dict) else g for g in state.missing_gems_cache[self.bot.user_id]]
+                        if g_type not in current_missing_names:
+                            state.missing_gems_cache[self.bot.user_id].append({"name": g_type, "time": time.time()})
+                            self.bot.log("WARN", f"[NeuraGems] {g_type} not found in inventory, added to cache.")
 
                 if to_use:
                     cmd_ids = [gid if not gid.startswith('0') else gid[1:] for gid in to_use]
                     use_cmd = f"owo use {' '.join(cmd_ids)}"
+                    
+                    self.bot.log("SUCCESS", f"[NeuraGems] Deliberating gem use: {use_cmd}")
+                    await asyncio.sleep(random.uniform(6.0, 15.0))
                     await self.bot.neura_enqueue(use_cmd, priority=2)
                     self.bot.log("SUCCESS", f"[NeuraGems] Equipped: {use_cmd}")
                     # it prevent rechecking for 10s after using a gem ,,,(it is to prevent spam)

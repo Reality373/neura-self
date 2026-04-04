@@ -40,11 +40,17 @@ class Grinding(commands.Cog):
         if "you found:" in content:
             if "hunt" in self.bot.cmd_states:
                 cfg = self.bot.config.get('commands', {}).get('hunt', {})
-                self.bot.cmd_states["hunt"]["delay"] = random.uniform(cfg.get('cooldown', [15, 18])[0], cfg.get('cooldown', [15, 18])[1])
+                base_delay = random.uniform(cfg.get('cooldown', [15, 18])[0], cfg.get('cooldown', [15, 18])[1])
+                if random.random() < 0.15:
+                    base_delay -= random.uniform(2.0, 3.5)
+                self.bot.cmd_states["hunt"]["delay"] = base_delay
         elif "you won" in content or "you lost" in content or "streak:" in content:
             if "battle" in self.bot.cmd_states:
                 cfg = self.bot.config.get('commands', {}).get('battle', {})
-                self.bot.cmd_states["battle"]["delay"] = random.uniform(cfg.get('cooldown', [15, 18])[0], cfg.get('cooldown', [15, 18])[1])
+                base_delay = random.uniform(cfg.get('cooldown', [15, 18])[0], cfg.get('cooldown', [15, 18])[1])
+                if random.random() < 0.15:
+                    base_delay -= random.uniform(2.0, 3.5)
+                self.bot.cmd_states["battle"]["delay"] = base_delay
 
     async def register_actions(self):
         cfg_hunt = self.bot.config.get('commands', {}).get('hunt', {})
@@ -53,7 +59,7 @@ class Grinding(commands.Cog):
             rb_cfg = self.bot.config.get('reactionBot', {})
             if rb_cfg.get('enabled', False) and rb_cfg.get('hunt_and_battle', False):
                 delay += 5
-            await self.bot.neura_register_command("hunt", "hunt", priority=3, delay=delay, initial_offset=5)
+            await self.bot.neura_register_command("hunt", "hunt", priority=3, delay=delay, initial_offset=random.uniform(5, 25))
 
         cfg_battle = self.bot.config.get('commands', {}).get('battle', {})
         if cfg_battle.get('enabled', False):
@@ -61,15 +67,16 @@ class Grinding(commands.Cog):
             rb_cfg = self.bot.config.get('reactionBot', {})
             if rb_cfg.get('enabled', False) and rb_cfg.get('hunt_and_battle', False):
                 delay += 5
-            await self.bot.neura_register_command("battle", "battle", priority=3, delay=delay, initial_offset=10)
+            await self.bot.neura_register_command("battle", "battle", priority=3, delay=delay, initial_offset=random.uniform(15, 45))
 
         cfg_owo = self.bot.config.get('commands', {}).get('owo', {})
         if cfg_owo.get('enabled', False):
-            delay = random.uniform(cfg_owo.get('cooldown', [10, 13])[0], cfg_owo.get('cooldown', [10, 13])[1])
+            # Phase 7: Relaxed owo (20-60s) to avoid 10s "heartbeat" signature.
+            delay = random.uniform(20, 60)
             rb_cfg = self.bot.config.get('reactionBot', {})
             if rb_cfg.get('enabled', False) and rb_cfg.get('owo', False):
                 delay += 5
-            await self.bot.neura_register_command("owo", "owo", priority=1, delay=delay, initial_offset=15)
+            await self.bot.neura_register_command("owo", "owo", priority=1, delay=delay, initial_offset=random.uniform(30, 60))
 
 async def setup(bot):
     cog = Grinding(bot)

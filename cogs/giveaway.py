@@ -69,7 +69,8 @@ class Giveaway(commands.Cog):
         if message.id in self.joined_ids:
             return
 
-        cooldown = cfg.get('cooldown', 2)
+        # Phase 13: Giveaway Realism (5-15s delay)
+        cooldown = cfg.get('cooldown', random.uniform(5.0, 15.0))
         await asyncio.sleep(cooldown)
 
         if not message.components: return

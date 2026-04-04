@@ -5,8 +5,8 @@ def apply_syntax_variance(cmd, stealth_cfg):
     if not syn_cfg.get('enabled', False):
         return cmd
 
-    cap_rate = syn_cfg.get('capitalization_rate', 20) / 100.0
-    space_rate = syn_cfg.get('space_rate', 15) / 100.0
+    cap_rate = syn_cfg.get('capitalization_rate', 4) / 100.0
+    space_rate = syn_cfg.get('space_rate', 2) / 100.0
     
     if random.random() < space_rate:
         cmd = cmd.replace(" ", "  ", 1)

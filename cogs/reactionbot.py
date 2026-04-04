@@ -44,8 +44,13 @@ class ReactionBot(commands.Cog):
         hunt_battle = rb_settings.get("hunt_and_battle", False)
         owo = rb_settings.get("owo", False)
         pray_curse = rb_settings.get("pray_and_curse", False)
-        delay_range = rb_settings.get("cooldown", [0.5, 1.0])
+        delay_range = rb_settings.get("cooldown", [2.5, 7.0]) # Phase 12: Human reaction time
         
+        # 5% chance to "ignore" or miss a reminder
+        if random.random() < 0.05:
+            self.bot.log("STEALTH", "Human missed/ignored the reminder message.")
+            return
+
         trigger_delay = random.uniform(delay_range[0], delay_range[1])
         
         def force_run(cmd_id):
@@ -53,7 +58,10 @@ class ReactionBot(commands.Cog):
                 now = time.time()
                 last_sent = getattr(self.bot, "last_sent_time", 0)
                 last_cmd = getattr(self.bot, "last_sent_command", "").lower()
-                if now - last_sent < 5.0 and cmd_id in last_cmd:
+                # Phase 17: Social Politeness / Improved Interaction Detection
+                # If we recently sent the command manually, don't force it again instantly.
+                if (now - last_sent < 30.0) and (cmd_id in last_cmd):
+                    self.bot.log("STEALTH", f"ReactionBot: {cmd_id} was recently sent manually. Ignoring reminder.")
                     return
 
                 self.bot.cmd_states[cmd_id]["last_ran"] = 0
@@ -75,7 +83,10 @@ class ReactionBot(commands.Cog):
             if curse_cfg.get("enabled", False): cmds.append("curse")
             
             if cmds:
-                self.bot.loop.call_later(trigger_delay, force_run, random.choice(cmds))
+                # Phase 17: Politeness Delay for Prayers/Curses (15-45s)
+                # Humans don't usually spam these commands instantly after a reminder if they just saw a recent message.
+                politeness_delay = trigger_delay + random.uniform(15.0, 45.0)
+                self.bot.loop.call_later(politeness_delay, force_run, random.choice(cmds))
 
 async def setup(bot):
     await bot.add_cog(ReactionBot(bot))

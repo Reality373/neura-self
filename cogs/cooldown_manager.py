@@ -102,8 +102,10 @@ class CooldownManager:
                         }
                         cmd_id = alias_map.get(cmd_part, cmd_part)
 
+                # Phase 14: Organic resume delay (1.5s - 5.0s jitter)
+                resume_jitter = random.uniform(1.5, 5.0)
                 if wait_seconds <= 15:
-                    self.bot.throttle_until = time.time() + wait_seconds + 0.5
+                    self.bot.throttle_until = time.time() + wait_seconds + resume_jitter
                 else:
                     pass
 
@@ -119,7 +121,10 @@ class CooldownManager:
                             self.bot.log("COOLDOWN", f"Refined {cmd_id} timer (Global Pause: {wait_seconds}s)")
 
         elif "too tired to run" in content:
-            self.bot.log("COOLDOWN", "Too tired to run (Synced)")
+            # Phase 14: Tired break simulation (60s - 180s)
+            wait_time = random.uniform(60.0, 180.0)
+            self.bot.throttle_until = max(self.bot.throttle_until, time.time() + wait_time)
+            self.bot.log("COOLDOWN", f"Too tired to run. Human is taking a break ({round(wait_time, 1)}s).")
 
 async def setup(bot):
     cog = CooldownManager(bot)

@@ -56,6 +56,7 @@ class NeuraBot(commands.Bot):
                 self.channels = self.channels or primary.get('channels', [])
         
         self.channel_id = int(self.channels[0]) if self.channels else None
+        self.start_time = time.time() # Phase 7: Track startup for fatigue scaling
         
         core_cfg = self.config.get('core', {})
         self.prefix = core_cfg.get('prefix', 'owo ')
@@ -77,8 +78,14 @@ class NeuraBot(commands.Bot):
         self.throttle_until = 0.0
         self.last_sent_time = 0
         self.last_sent_command = ""
+        self.last_sent_id = None
         self.command_lock = asyncio.Lock()
         self.min_command_interval = 2.2
+        self.current_drifted_min_interval = 2.2
+        self.last_interval_drift = 0
+        self.current_burst_count = 0
+        self.burst_limit = random.randint(2, 5)
+        
         self.command_history = []
         self.is_ready = False
         self.cmd_cooldowns = {}
@@ -111,7 +118,7 @@ class NeuraBot(commands.Bot):
         await self._load_cogs()
     
     async def _process_pending_commands(self):
-        await asyncio.sleep(5)
+        await asyncio.sleep(random.uniform(15, 30)) # Wait for app to "load" 
         while True:
             if not self.is_ready:
                 await asyncio.sleep(1)
@@ -250,10 +257,22 @@ class NeuraBot(commands.Bot):
                 
                 actual_cmd = base_cmd[len(prefix):] if base_cmd.startswith(prefix) else base_cmd
                 
+                # Dynamic human-like alias choice (30% chance to flip shorthand even if setting is False)
                 if actual_cmd in self.shortforms:
-                    if self.config.get('commands', {}).get(actual_cmd, {}).get('use_shortform', False):
+                    is_enabled_in_cfg = self.config.get('commands', {}).get(actual_cmd, {}).get('use_shortform', False)
+                    if is_enabled_in_cfg or random.random() < 0.30:
                         new_base = self.shortforms[actual_cmd]
-                        parts[0] = f"{self.prefix}{new_base}" if base_cmd.startswith(prefix) else new_base
+                        # Phase 16: Messy Syntax Variance (Double space / No space)
+                        stealth_factor = self.config.get('core', {}).get('human_stealth_factor', 0.5)
+                        roll = random.random()
+                        
+                        if roll < (0.01 * stealth_factor): # Double space
+                             parts[0] = f"{self.prefix} {new_base}" if base_cmd.startswith(prefix) else f" {new_base}"
+                        elif roll < (0.015 * stealth_factor): # No space
+                             parts[0] = f"{self.prefix.strip()}{new_base}" if base_cmd.startswith(prefix) else new_base
+                        else:
+                             parts[0] = f"{self.prefix}{new_base}" if base_cmd.startswith(prefix) else new_base
+                             
                         cmd = " ".join(parts)
 
         known = ['hunt', 'battle', 'curse', 'huntbot', 'daily', 'cookie',
@@ -278,6 +297,13 @@ class NeuraBot(commands.Bot):
     
     async def send_message(self, content, skip_typing=False, priority=False):
         if not self.active: return False
+        
+        # Phase 22: Mobile Network Hang Simulation (0.5% chance)
+        if self.is_mobile and random.random() < 0.005:
+             hang_duration = random.uniform(5, 15)
+             self.log("STEALTH", f"Mobile: Network hang detected. Waiting {round(hang_duration)}s...")
+             await asyncio.sleep(hang_duration)
+             
         if self.paused and "autohunt" not in content.lower() and "check" not in content.lower():
             return False
         
@@ -385,6 +411,22 @@ class NeuraBot(commands.Bot):
                         self.log("ERROR", f"Failed to create settings_{uid}.json: {e}")
             else:
                 self.log("SYS", "Using global settings: settings.json")
+
+            # Phase 25: Settings Jitter (Startup Only)
+            if not getattr(self, 'settings_jittered', False):
+                stealth_cfg = self.config.get('stealth', {})
+                hb_cfg = stealth_cfg.get('human_break', {})
+                if hb_cfg and hb_cfg.get('enabled', True):
+                    old_int = hb_cfg.get('interval_min', 45)
+                    old_dur = hb_cfg.get('duration_min', 14)
+                    
+                    # Apply +/- 15% random jitter to settings IN MEMORY
+                    hb_cfg['interval_min'] = int(old_int * random.uniform(0.85, 1.15))
+                    hb_cfg['duration_min'] = int(old_dur * random.uniform(0.85, 1.15))
+                    
+                    self.log("STEALTH", f"Settings Jitter: Human stamina profile randomized (Interval: {hb_cfg['interval_min']}m, Duration: {hb_cfg['duration_min']}m)")
+                
+                self.settings_jittered = True
 
             account_file = os.path.join(self.base_dir, 'config', 'accounts.json')
             if os.path.exists(account_file):
@@ -501,6 +543,15 @@ class NeuraBot(commands.Bot):
         return self.identity.is_message_for_me(message, role, keyword)
 
     async def neura_enqueue(self, content, priority=3, skip_typing=None, _cmd_id=None):
+        # Phase 14: Organic Typo Correction (1% chance)
+        if random.random() < 0.01 and "owo" in content.lower():
+            wrong = content.lower().replace("hunt", "hnt").replace("battle", "btl").replace("cash", "csh").replace("pray", "pary")
+            if wrong != content.lower():
+                self.log("STEALTH", f"Human made a typo: sending '{wrong}' first...")
+                asyncio.create_task(self.neura_send(wrong))
+                await asyncio.sleep(random.uniform(2.5, 4.5))
+                self.log("STEALTH", "Correcting typo now...")
+
         options = {"skip_typing": skip_typing, "_cmd_id": _cmd_id}
         item = (priority, time.time(), content, options)
         await self.neura_queue.put(item)
@@ -520,7 +571,7 @@ class NeuraBot(commands.Bot):
                     if content == "":
                         if cmd_id == "channelswitch":
                             cog = self.get_cog("ChannelSwitch")
-                            if cog: cog.trigger_switch()
+                            if cog: await cog.trigger_switch()
                         
                         if cmd_id and cmd_id in self.cmd_states:
                            self.cmd_states[cmd_id]['last_ran'] = time.time()
@@ -528,7 +579,20 @@ class NeuraBot(commands.Bot):
                         ran_successfully = True
                         continue
                     
-                    wait_limit = 1.2 if priority <= 1 else self.min_command_interval
+                    # Phase 26: Interval Drifting (Every 5 mins)
+                    if time.time() - self.last_interval_drift > 300:
+                         self.current_drifted_min_interval = random.uniform(1.8, 3.5)
+                         self.last_interval_drift = time.time()
+                         self.log("STEALTH", f"Interval Drift: Base command spacing now {round(self.current_drifted_min_interval, 1)}s.")
+
+                    # Phase 26: Relationship Relationship Follow-up (Hunt -> Battle)
+                    # If we just sent hunt, and battle is next in queue, reduce wait to human reaction speed.
+                    is_h_b_cluster = (self.last_sent_id == "hunt" and cmd_id == "battle")
+                    
+                    if is_h_b_cluster:
+                         wait_limit = random.uniform(1.1, 2.8)
+                    else:
+                         wait_limit = 1.2 if priority <= 1 else self.current_drifted_min_interval
                     
                     now = time.time()
                     elapsed = now - self.last_sent_time
@@ -537,6 +601,12 @@ class NeuraBot(commands.Bot):
 
                     if self.paused and "autohunt" not in content.lower() and "check" not in content.lower():
                         continue
+                    
+                    # Phase 26: Dithering Delays (10% chance)
+                    if random.random() < 0.10:
+                         dither_delay = random.uniform(3.0, 7.0)
+                         self.log("STEALTH", f"Dithering: Human is hesitating before sending '{cmd_id}' (+{round(dither_delay, 1)}s)...")
+                         await asyncio.sleep(dither_delay)
 
                     gem_check_val = state.checking_gems.get(self.user_id)
                     if gem_check_val:
@@ -561,6 +631,10 @@ class NeuraBot(commands.Bot):
                     from modules.stealth_curiosity import evaluate_curiosity_trigger
                     await evaluate_curiosity_trigger(self, stealth_cfg)
 
+                    if priority in [2, 4]:
+                        thinking_delay = random.uniform(1.5, 4.0)
+                        await asyncio.sleep(thinking_delay)
+
                     if cmd_id and cmd_id in self.cmd_states:
                         last_ran = self.cmd_states[cmd_id]['last_ran']
                         if time.time() - last_ran < 2.0:
@@ -570,7 +644,18 @@ class NeuraBot(commands.Bot):
 
                     await self._send_safe(content, skip_typing=skip_typing)
                     self.last_sent_time = time.time()
+                    self.last_sent_id = cmd_id
                     ran_successfully = True
+                    
+                    # Phase 26: Activity Burst Logic
+                    if priority >= 3: # Only count grinding towards bursts
+                         self.current_burst_count += 1
+                         if self.current_burst_count >= self.burst_limit:
+                              burp_pause = random.uniform(15.0, 45.0)
+                              self.log("STEALTH", f"Activity Burst: Finished burst of {self.current_burst_count} commands. Mini-break: {round(burp_pause)}s.")
+                              await asyncio.sleep(burp_pause)
+                              self.current_burst_count = 0
+                              self.burst_limit = random.randint(2, 6)
                     
                     if cmd_id and cmd_id in self.cmd_states:
                         if cmd_id in ["rpp", "quest", "level_quotes", "huntbot", "daily", "cookie", "coinflip", "slots"]:
@@ -613,12 +698,82 @@ class NeuraBot(commands.Bot):
                     await asyncio.sleep(1)
                     continue
 
+                # Phase 14: OwO Lag Detection
+                # If command sent > 25s ago and no success, simulate user getting annoyed.
                 now = time.time()
-                for cmd_id, state in list(self.cmd_states.items()):
+                delta_last_sent = now - self.last_sent_time
+                if delta_last_sent > 25 and not self.paused and self.last_sent_time != 0:
+                    wait_time = random.uniform(45.0, 120.0)
+                    self.log("ALARM", f"Bot appears unresponsive (25s+). Pausing for {round(wait_time)}s.")
+                    self.throttle_until = now + wait_time
+                    self.last_sent_time = now # prevent re-triggering until next command
+                    continue
+
+                # New: OwO Bot unresponsive detection (Phase 6)
+                consecutive_failures = state.account_stats.get(self.user_id, {}).get('consecutive_failures', 0)
+                if consecutive_failures >= 3:
+                    wait = random.randint(300, 900) # 5-15 mins
+                    self.log("WARN", f"OwO Bot is unresponsive ({consecutive_failures} fails). Human is giving up for {int(wait/60)} mins...")
+                    self.paused = True
+                    await asyncio.sleep(wait)
+                    self.paused = False
+                    state.account_stats[self.user_id]['consecutive_failures'] = 0
+                    continue
+
+                now = time.time()
+                items = list(self.cmd_states.items())
+                random.shuffle(items)
+                
+                # Phase 20: Forgetfulness Logic (0.1% chance to skip utility for 60-120s)
+                forgetfulness_roll = random.random()
+                
+                for cmd_id, state in items:
                     if state["in_queue"]: continue
                     
-                    if now - state["last_ran"] >= state["delay"]:
+                    # Forget utility commands occasionally
+                    if state["priority"] >= 4 and forgetfulness_roll < 0.001:
+                         self.log("STEALTH", f"Forgetfulness: Human forgot to check '{cmd_id}'. Retrying in 1-2 mins...")
+                         state["last_ran"] = now - (state["delay"] - random.randint(60, 120))
+                         continue
+                    
+                    # New: Adaptive Startup Ramping (Phase 8)
+                    # Apply up to +25% delay that decays over 30 mins
+                    session_duration = now - self.start_time
+                    ramp_factor = max(0.0, 0.25 * (1 - (session_duration / 1800)))
+                    actual_delay = state["delay"] * (1 + ramp_factor)
+
+                    if now - state["last_ran"] >= actual_delay:
+                        # Phase 16: Human Stealth Factor Scaling
+                        stealth_factor = self.config.get('core', {}).get('human_stealth_factor', 0.5)
+                        
+                        # Phase 21: Persona-Driven Skip Scaling
+                        from modules.stealth_circadian import get_session_persona
+                        persona = get_session_persona()
+                        
+                        skip_chance = 0.01 # Base (Grinder)
+                        if persona == 'CASUAL':
+                             skip_chance = 0.10 # 10% skip
+                        elif persona == 'COLLECTOR':
+                             # Collectors skip hunt/battle but NEVER skip shop/lootbox
+                             if cmd_id in ['hunt', 'battle']:
+                                  skip_chance = 0.15
+                             elif cmd_id in ['shop_buy', 'shop_cash_sync', 'open_lootbox', 'open_crate']:
+                                  skip_chance = 0.0
+                        
+                        if state["priority"] == 3 and random.random() < (skip_chance * stealth_factor):
+                            self.log("STEALTH", f"Persona ({persona}) is distracted: Skipping {cmd_id} for this cycle.")
+                            state["last_ran"] = now
+                            continue
+                            
+                        # Phase 18: Dynamic Priority Flip (5% chance to re-order)
+                        # Phase 19: Command Priority Tossing (Utility Swap)
+                        actual_priority = state["priority"]
+                        if random.random() < 0.05 and actual_priority >= 3:
+                             # Swap 3 <-> 4 to vary execution order
+                             actual_priority = 4 if actual_priority == 3 else 3
+                             
                         state["in_queue"] = True
+                        state["priority"] = actual_priority
                         actual_content = state["content"]
                         if callable(actual_content):
                             if asyncio.iscoroutinefunction(actual_content):
@@ -632,7 +787,33 @@ class NeuraBot(commands.Bot):
                             state["in_queue"] = False
                             state["last_ran"] = time.time()
 
-                await asyncio.sleep(1)
+                # New: Ghost Typing / Lurking Presence (Phase 10/18)
+                # 0.5% chance to just "type" for a few seconds to look human
+                if random.random() < 0.005: 
+                    ch = self.get_channel(self.channel_id) if self.channel_id else None
+                    if ch:
+                        async with ch.typing():
+                            # Phase 18: Uncertainty Factor (15% chance to think & delete)
+                            is_uncertain = random.random() < 0.15
+                            await asyncio.sleep(random.uniform(2, 5))
+                            if not is_uncertain:
+                                # Phase 19: Vanity Lurking (1% chance to check Profile/Zoo instead of silence)
+                                # Phase 21: Persona-Driven Vanity Chance
+                                vanity_chance = 0.01 
+                                if persona == 'CASUAL': vanity_chance = 0.05
+                                elif persona == 'COLLECTOR': vanity_chance = 0.10 # Collectors love checking stuff
+                                
+                                if random.random() < vanity_chance:
+                                     vanity_cmd = random.choice(["owo p", "owo zoo", "owo inv", "owo cash"])
+                                     self.log("STEALTH", f"Vanity Lurking ({persona}): User is checking {vanity_cmd}...")
+                                     await self.neura_enqueue(vanity_cmd, priority=5)
+                                     await asyncio.sleep(random.uniform(10, 25))
+                                else:
+                                     self.log("STEALTH", "Ghost Typing: Simulated user presence.")
+                            else:
+                                self.log("STEALTH", "Thinking: User decided NOT to send a message.")
+
+                await asyncio.sleep(random.uniform(0.8, 1.5))
             except Exception as e:
                 self.log("ERROR", f"Scheduler error: {e}")
                 import traceback

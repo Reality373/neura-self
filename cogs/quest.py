@@ -15,6 +15,8 @@ import time
 import core.state as state
 from discord.ext import commands
 
+import random
+
 class Quest(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -26,7 +28,9 @@ class Quest(commands.Cog):
         if cfg.get('enabled', True):
             self.bot.log("SYS", "Quest Module configured.")
             ih = cfg.get('interval_h', 6)
-            await self.bot.neura_register_command("quest", "quest", priority=4, delay=ih * 3600, initial_offset=10)
+            # Phase 15: Quest Interval Jitter
+            delay = (ih * 3600) + random.randint(-1800, 1800)
+            await self.bot.neura_register_command("quest", "quest", priority=4, delay=delay, initial_offset=random.uniform(120, 600))
             self.trigger_action()
 
     def trigger_action(self):
@@ -34,7 +38,8 @@ class Quest(commands.Cog):
         ih = cfg.get('interval_h', 6)
         
         if 'quest' in self.bot.cmd_states:
-            self.bot.cmd_states['quest']['delay'] = ih * 3600
+            # Phase 15: Quest Interval Jitter
+            self.bot.cmd_states['quest']['delay'] = (ih * 3600) + random.randint(-1800, 1800)
 
     @commands.Cog.listener()
     async def on_message(self, message):

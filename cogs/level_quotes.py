@@ -42,7 +42,7 @@ class LevelQuotes(commands.Cog):
         cfg = self.bot.config.get('level_grind', {})
         msg = self.get_random_quote(cfg.get('min_length', 10), cfg.get('max_length', 100))
         
-        cooldown = cfg.get('cooldown', [60, 90])
+        cooldown = cfg.get('cooldown', [600, 1800]) # 10-30 minutes
         delay = random.uniform(cooldown[0], cooldown[1])
         
         uid = str(self.bot.user.id)
@@ -63,7 +63,7 @@ class LevelQuotes(commands.Cog):
     async def register_actions(self):
         cfg = self.bot.config.get('level_grind', {})
         if cfg.get('enabled', False):
-            cooldown = cfg.get('cooldown', [60, 90])
+            cooldown = cfg.get('cooldown', [600, 1800]) 
             await self.bot.neura_register_command("level_quotes", "owo level", priority=4, delay=random.uniform(cooldown[0], cooldown[1]), initial_offset=20)
             self.trigger_action()
 

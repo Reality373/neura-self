@@ -12,8 +12,8 @@ async def evaluate_curiosity_trigger(bot, stealth_cfg):
         return False
         
     curiosity_cmds = cur_cfg.get('commands', ["owo cash", "owo inv", "owo zoo", "owo profile"])
-    trigger_min = cur_cfg.get('trigger_min', 20)
-    trigger_max = cur_cfg.get('trigger_max', 50)
+    trigger_min = cur_cfg.get('trigger_min', 100)
+    trigger_max = cur_cfg.get('trigger_max', 250)
     
     if curiosity_cmds:
         cmd_counter_global += 1

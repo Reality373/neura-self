@@ -28,9 +28,11 @@ class NeuraCursePray(commands.Cog):
             try:
                 with open(self.state_file, "r") as f:
                     data = json.load(f)
+                    self.last_target = data.get("cp_last_target")
                     return data.get("cp_last_run", 0)
             except:
                 pass
+        self.last_target = None
         return 0
 
     def _save_last_run(self):
@@ -41,6 +43,8 @@ class NeuraCursePray(commands.Cog):
                     data = json.load(f)
             except:
                 pass
+        data["cp_last_run"] = self.last_run
+        data["cp_last_target"] = self.last_target
         with open(self.state_file, "w") as f:
             json.dump(data, f)
 
@@ -54,7 +58,16 @@ class NeuraCursePray(commands.Cog):
         if pray_cfg.get("enabled", False): available.append("pray")
         
         if available:
-            choice = random.choice(available)
+            # Phase 17: Moody Mood Bias (Curse vs Pray based on sleepiness)
+            # Late-night/Early-morning users are more likely to curse (cranky)
+            current_hour = time.localtime().tm_hour
+            if current_hour in [0, 1, 2, 3, 4, 22, 23]:
+                # Cranky mood
+                choice = random.choices(available, weights=[70, 30] if "curse" in available and "pray" in available else None)[0]
+            else:
+                # Kind mood
+                choice = random.choices(available, weights=[30, 70] if "curse" in available and "pray" in available else None)[0]
+            
             cfg = curse_cfg if choice == "curse" else pray_cfg
             
             raw_targets = cfg.get("targets", [])
@@ -64,7 +77,14 @@ class NeuraCursePray(commands.Cog):
             targets = [str(t).strip() for t in raw_targets if t and str(t).strip()]
                 
             if targets:
-                target = random.choice(targets)
+                # Phase 17: Target Affinity (70% chance for friend/rival)
+                if self.last_target in targets and random.random() < 0.70:
+                    target = self.last_target
+                    self.bot.log("STEALTH", f"Social Affinity Triggered: Targeting {target} again.")
+                else:
+                    target = random.choice(targets)
+                
+                self.last_target = target
                 if cfg.get("ping", True):
                     full_cmd = f"{choice} <@{target}>"
                 else:
@@ -74,8 +94,8 @@ class NeuraCursePray(commands.Cog):
             
             self.bot.cmd_states['cursepray']['content'] = full_cmd
 
-            cooldown_range = cfg.get("cooldown", [305, 310])
-            cur_cooldown = random.uniform(cooldown_range[0], cooldown_range[1])
+            # Phase 17: Social Timing Jitter (300 - 450s)
+            cur_cooldown = random.uniform(300, 450)
             self.bot.cmd_states['cursepray']['delay'] = cur_cooldown
 
 
@@ -114,12 +134,9 @@ class NeuraCursePray(commands.Cog):
         if cmds_cfg.get("curse", {}).get("enabled", False) or cmds_cfg.get("pray", {}).get("enabled", False):
             self.bot.log("SYS", "NeuraCursePray Module configured.")
             
-            delay = 305
-            rb_cfg = self.bot.config.get('reactionBot', {})
-            if rb_cfg.get('enabled', False) and rb_cfg.get('pray_and_curse', False):
-                delay += 5
-                
-            await self.bot.neura_register_command("cursepray", "curse", priority=3, delay=delay, initial_offset=20)
+            # Phase 17: Social Jitter Startup (45s - 150s)
+            startup_offset = random.uniform(45, 150)
+            await self.bot.neura_register_command("cursepray", "curse", priority=3, delay=delay, initial_offset=startup_offset)
             self.trigger_action()
 
 async def setup(bot):
