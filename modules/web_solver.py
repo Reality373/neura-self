@@ -154,30 +154,24 @@ class WebSolver:
                     redirect_url = auth_data.get("location")
 
                 if redirect_url:
-                    self.bot.log("SYS", f"Opening Auth Login for {self.bot.username}...")
+                    self.bot.log("SYS", f"Generated Auth Login linking directly to Captcha for {self.bot.username}!")
                     
                     try:
-                        # chrome_path = self.browser_cfg.get('executable_path')
-                        # user_data = self.browser_cfg.get('user_data_dir')
-                        # profile = self.browser_cfg.get('profile_name', 'Default')
-                        # if chrome_path and user_data:
-                        #     subprocess.Popen([
-                        #         chrome_path,
-                        #         f'--user-data-dir={user_data}',
-                        #         f'--profile-directory={profile}',
-                        #         redirect_url
-                        #     ])
-                        # else:
-                        subprocess.Popen(f'start "" "{redirect_url}"', shell=True)
+                        if self.bot.is_mobile:
+                            # For Termux mobile devices
+                            subprocess.Popen(f'termux-open-url "{redirect_url}"', shell=True)
+                        else:
+                            # For Windows / PC
+                            subprocess.Popen(f'start "" "{redirect_url}"', shell=True)
                         
-                        return True
+                        return redirect_url
                     except Exception as e:
                         self.bot.log("ERROR", f"Browser launch failed: {e}")
-                        return False
-                return False
+                        return redirect_url
+                return None
             except Exception as e:
                 self.bot.log("ERROR", f"Browser solver start failed: {e}")
-                return False
+                return None
 
 def setup_web_solver(bot):
     return WebSolver(bot)

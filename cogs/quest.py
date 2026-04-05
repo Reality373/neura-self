@@ -22,6 +22,8 @@ class Quest(commands.Cog):
         self.bot = bot
         self.active = True
         self.task = None
+        self.active_resolutions = set()
+        self.last_parse_time = 0
 
     async def register_actions(self):
         cfg = self.bot.config.get('commands', {}).get('quest', {})
@@ -61,6 +63,11 @@ class Quest(commands.Cog):
             
             if not is_for_me:
                 return
+            
+            # Debounce rapid firing (wait 10s between full parses)
+            if time.time() - self.last_parse_time < 10:
+                return
+            self.last_parse_time = time.time()
             
             self._parse_quests(full_text)
 
@@ -113,6 +120,10 @@ class Quest(commands.Cog):
                     was_completed = any(q['description'] == desc and q.get('completed') for q in old_quests)
                     if not was_completed:
                         self.bot.log("SUCCESS", f"QUEST COMPLETED: {desc}")
+                elif current < total:
+                    # Attempt to resolve action / say quests
+                    if desc not in self.active_resolutions:
+                        asyncio.create_task(self._auto_resolve_quest(desc, total - current))
 
         timer_match = re.search(timer_pattern, text)
         next_timer = timer_match.group(1).upper() if timer_match else None
@@ -124,6 +135,43 @@ class Quest(commands.Cog):
             self.bot.log("SYS", f"Dashboard synced: {len(new_quest_data)} quests tracked.")
         elif "quest log" in text:
             self.bot.log("DEBUG", "Regex failure: Found 'Quest Log' but couldn't parse progress lines.")
+
+    async def _auto_resolve_quest(self, desc, remaining):
+        cfg = self.bot.config.get('commands', {}).get('quest', {})
+        if not cfg.get('auto_checklist', True): return
+        
+        self.active_resolutions.add(desc)
+        try:
+            desc_lower = desc.lower()
+        
+            if "say 'owo'" in desc_lower or "say owo" in desc_lower:
+                self.bot.log("SYS", f"Smart Quest: Queuing {min(remaining, 5)} 'owo' messages.")
+                for _ in range(min(remaining, 5)):
+                    await self.bot.neura_enqueue("owo", priority=2)
+                    await asyncio.sleep(random.uniform(5, 12))
+            
+            elif "use an action command" in desc_lower:
+                actions = ["hug", "kiss", "cuddle", "pat", "slap", "punch", "bite", "lick"]
+                action = random.choice(actions)
+                # Find a random valid channel and fetch recent users
+                if not self.bot.channels: return
+                try:
+                    channel = self.bot.get_channel(int(self.bot.channels[0]))
+                    if channel:
+                        history = [msg async for msg in channel.history(limit=20)]
+                        target = random.choice([m.author for m in history if m.author.id != self.bot.user.id and not m.author.bot])
+                        
+                        self.bot.log("SYS", f"Smart Quest: Action queued ('owo {action} @{target.name}')")
+                        await self.bot.neura_enqueue(f"owo {action} <@{target.id}>", priority=2)
+                except Exception as e:
+                    self.bot.log("ERROR", f"Failed to get target for action quest: {e}")
+        except Exception as e:
+            self.bot.log("ERROR", f"Quest automation error: {e}")
+        finally:
+            # Allow refiring after a short wait to ensure owo bot processed the previous ones
+            await asyncio.sleep(60) 
+            if desc in self.active_resolutions:
+                self.active_resolutions.remove(desc)
 
 async def setup(bot):
     cog = Quest(bot)

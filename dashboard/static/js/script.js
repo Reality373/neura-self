@@ -519,6 +519,19 @@ function update() {
             document.getElementById('cpm').innerText = d.chart_data.perf_bpm;
             if (document.getElementById('totalOwO')) document.getElementById('totalOwO').innerHTML = `${d.chart_data.owo} <span style="font-size:0.5em; color:#a855f7;" id="owoSession">(${d.chart_data.session_owo} this session)</span>`;
         }
+        
+        if (d.economy) {
+            let profEl = document.getElementById('economy-profit');
+            if (profEl) {
+                let p = d.economy.profit || 0;
+                profEl.innerText = (p > 0 ? "+" : "") + p;
+                profEl.style.color = p >= 0 ? "var(--success)" : "var(--error)";
+            }
+            let gemsEl = document.getElementById('economy-gems');
+            if (gemsEl) gemsEl.innerText = d.economy.gems || 0;
+            let lbEl = document.getElementById('economy-lootboxes');
+            if (lbEl) lbEl.innerText = d.economy.lootboxes || 0;
+        }
 
         if (d.stealth_matrix) {
             const m = d.stealth_matrix;

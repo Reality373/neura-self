@@ -239,6 +239,11 @@ def stats():
             'total': st.get('total_cmd_count', 0),
             'perf_bpm': cpm
         },
+        'economy': {
+            'profit': cash_diff if 'cash_diff' in locals() else 0,
+            'gems': st.get('gems_used', 0),
+            'lootboxes': st.get('lootboxes_opened', 0)
+        },
         'system': {
             'last_cash_update': st.get('last_cash_update', 0),
             'pending_commands': len(st.get('pending_commands', []))

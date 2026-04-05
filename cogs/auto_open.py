@@ -55,6 +55,12 @@ class AutoOpen(commands.Cog):
         use_crate = cfg.get('crate', {}).get('enabled', False)
         use_lootbox = cfg.get('lootbox', {}).get('enabled', False)
         lower = message.content.lower()
+        
+        if "you opened your lootbox and found:" in lower:
+            import core.state as state
+            uid = str(self.bot.user.id) if self.bot.user else "408785106942164992"
+            if uid not in state.account_stats: state.account_stats[uid] = state.get_empty_stats()
+            state.account_stats[uid]['lootboxes_opened'] = state.account_stats[uid].get('lootboxes_opened', 0) + 1
 
         if ("received a" in lower or "found a" in lower) and "weapon crate" in lower:
             if use_crate and time.time() >= self.cooldowns['crate']:

@@ -182,6 +182,12 @@ class NeuraGems(commands.Cog):
             elif "special" in gem_name: g_type = "specialGem"
             
             if g_type:
+                import core.state as state
+                if self.bot.user:
+                    uid = str(self.bot.user.id)
+                    if uid not in state.account_stats: state.account_stats[uid] = state.get_empty_stats()
+                    state.account_stats[uid]['gems_used'] = state.account_stats[uid].get('gems_used', 0) + 1
+                    
                 if self.bot.user_id not in state.missing_gems_cache:
                     state.missing_gems_cache[self.bot.user_id] = []
                 

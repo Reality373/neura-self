@@ -1,7 +1,7 @@
 {
     "core": {
         "monitor_bot_id": "408785106942164992",
-        "prefix": "w",
+        "prefix": "w ",
         "human_stealth_factor": 0.5,
         "debug_mode": false
     },
@@ -60,13 +60,19 @@
         "coinflip": {
             "enabled": true,
             "use_shortform": true,
-            "amount": [100, 500],
+            "amount": [
+                100,
+                500
+            ],
             "side": "h"
         },
         "slots": {
             "enabled": true,
             "use_shortform": true,
-            "amount": [100, 500]
+            "amount": [
+                100,
+                500
+            ]
         },
         "sell_sac": {
             "sell": {

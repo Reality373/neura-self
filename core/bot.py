@@ -18,7 +18,6 @@ import random
 import asyncio
 import re
 import sys
-import requests
 import core.state as state
 from modules.neura_human import NeuraHuman
 from modules.neura_logs import neura_logger
@@ -26,6 +25,7 @@ from modules.identity import IdentityManager
 from modules.interactions import setup_interactions
 from modules.captcha_solver import setup_solver
 from modules.web_solver import setup_web_solver
+from modules.power_monitor import setup_power_monitor
 import aiohttp
 import unicodedata
 import logging
@@ -126,6 +126,13 @@ class NeuraBot(commands.Bot):
         asyncio.create_task(self.neura_queue_worker())
         self.neura_scheduler_task = asyncio.create_task(self.neura_scheduler_worker())
         await self._load_cogs()
+        setup_power_monitor(self)
+
+    async def cleanup(self):
+        """Phase 29: Proper Service Lifecycle Cleanup"""
+        if self.session:
+            await self.session.close()
+            self.log("SYS", "Bot session closed. Resources released.")
     
     async def _process_pending_commands(self):
         await asyncio.sleep(random.uniform(15, 30)) # Wait for app to "load" 
@@ -500,39 +507,7 @@ class NeuraBot(commands.Bot):
             self.config = {}
 
 
-    def check_version(self):
-        CURRENT_VERSION = "2.3.0" 
-        VERSION_URL = "https://raw.githubusercontent.com/routo-loop/neura_status_api/main/version.json"
-        
-        self.log("SYS", "Checking for updates...")
-        try:
-            r = requests.get(VERSION_URL, timeout=5)
-            if r.status_code == 200:
-                data = r.json()
-                latest_version = data.get("version", "2.3.0")
-                changelog = data.get("changelog", "No changes listed.")
-                
-                if latest_version != CURRENT_VERSION:
-                    os.system('cls' if os.name == 'nt' else 'clear')
-                    line = "┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈"
-                    self.console.print("\n")
-                    self.console.print(Align.center(f"[bold red]{line}[/bold red]"))
-                    self.console.print(Align.center(f"[bold white]   NEW VERSION AVAILABLE: [yellow]{latest_version}[/yellow] (Current: {CURRENT_VERSION})[/bold white]"))
-                    self.console.print(Align.center(f"[bold red]{line}[/bold red]"))
-                    self.console.print(Align.center(f"\n[bold cyan]CHANGELOG:[/bold cyan]\n[white]{changelog}[/white]\n"))
-                    self.console.print(Align.center(f"[bold red]{line}[/bold red]"))
-                    self.console.print(Align.center("[bold yellow]PLEASE UPDATE TO CONTINUE:[/bold yellow]"))
-                    self.console.print(Align.center("[bold cyan]https://github.com/routo-loop/neura-self[/bold cyan]"))
-                    self.console.print(Align.center(f"[bold red]{line}[/bold red]"))
-                    self.console.print("\n")
-                    sys.exit(0)
-                else:
-                    self.log("SYS", "You are on the latest version.")
-        except Exception as e:
-            self.log("WARN", f"Version check failed: {e}")
-    
     async def run_bot(self):
-        self.check_version()
         self.log("SYS", "Starting bot...")
         await self.start(self.token)
 

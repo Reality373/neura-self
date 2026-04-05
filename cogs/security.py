@@ -182,7 +182,7 @@ class Security(commands.Cog):
         if not self.enabled: return
         if isinstance(message.channel, discord.DMChannel) and message.author.id == int(self.monitor_id):
             if (discord.utils.utcnow() - message.created_at).total_seconds() > 30: return
-            if "i have verified that you are human" in message.content.lower():
+            if any(k in message.content.lower() for k in ["i have verified that you are human", "thank you for verifying", "verified!", "captcha solved", "your captcha has been solved"]):
                 self.bot.log("SUCCESS", "Verified detected in DM. Captcha solved successfully. Simulating post-captcha fatigue...")
                 
                 # Phase 23: Post-Captcha Stress Mode (Adrenaline/Cautious)
@@ -192,22 +192,29 @@ class Security(commands.Cog):
                 
                 # Phase 23: DM Social Recognition (1% chance to react)
                 if random.random() < 0.01:
-                     await message.add_reaction(random.choice(["👍", "✅", "😰", "👌"]))
+                     try:
+                         await message.add_reaction(random.choice(["👍", "✅", "😰", "👌"]))
+                     except:
+                         pass
                 
                 stealth_cfg = self.bot.config.get('stealth', {})
-                from modules.stealth_fatigue import apply_post_captcha_fatigue
-                await apply_post_captcha_fatigue(self.bot, stealth_cfg)
+                try:
+                    from modules.stealth_fatigue import apply_post_captcha_fatigue
+                    await apply_post_captcha_fatigue(self.bot, stealth_cfg)
+                except:
+                    pass
                 
                 self.bot.paused = False
                 self.bot.throttle_until = 0.0
                 self.bot.last_sent_time = 0
                 self.bot.warmup_until = 0
                 
+                # Clear all grinding cooldowns to resume immediately
                 grinding_cog = self.bot.get_cog('Grinding')
                 if grinding_cog:
-                    grinding_cog.cooldowns['hunt'] = 0
-                    grinding_cog.cooldowns['battle'] = 0
-                    grinding_cog.cooldowns['owo'] = 0
+                    if hasattr(grinding_cog, 'cooldowns'):
+                        for k in grinding_cog.cooldowns:
+                            grinding_cog.cooldowns[k] = 0
                 
                 self.bot.log("INFO", "All cooldowns reset. Bot resuming operations...")
                 await asyncio.sleep(2)
@@ -275,7 +282,7 @@ class Security(commands.Cog):
 
                 if not autosolved:
                     self._send_webhook("DM CAPTCHA", f"Solve link in DM: {captcha_url}")
-                    if sys.platform == "win32" and sec_cfg.get("open_captcha_url_on_pc", False):
+                    if sec_cfg.get("open_captcha_url_on_pc", False):
                         self.bot.log("SYS", "Opening Captcha in Browser with Auto-Login...")
                         asyncio.create_task(self.bot.web_solver.open_in_browser(captcha_url))
 
@@ -373,7 +380,7 @@ class Security(commands.Cog):
             if not autosolved:
                 solve_link = captcha_url or "https://owobot.com/captcha"
                 self._send_webhook("CAPTCHA DETECTED", f"Solve: {solve_link}")
-                if sys.platform == "win32" and sec_cfg.get("open_captcha_url_on_pc", False):
+                if sec_cfg.get("open_captcha_url_on_pc", False):
                     self.bot.log("SYS", "Opening Captcha in Browser with Auto-Login...")
                     asyncio.create_task(self.bot.web_solver.open_in_browser(captcha_url))
 

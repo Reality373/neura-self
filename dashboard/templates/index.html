@@ -18,9 +18,14 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a1a1a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="/static/manifest.json">
     <title>Neura Self</title>
     <link rel="icon" type="image/x-icon" href="/static/assets/neura.ico">
+    <link rel="apple-touch-icon" href="/static/assets/neuralogo.png">
     <link
         href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Exo+2:wght@300;400;600;800&family=Rajdhani:wght@400;600&family=Roboto+Mono:wght@400;500&display=swap"
         rel="stylesheet">
@@ -205,7 +210,31 @@
                         </div>
                     </div>
                 </div>
-                <div class="stealth-matrix-row">
+                <div class="stealth-matrix-row" style="margin-top: 20px;">
+                    <div class="stealth-card">
+                        <div class="stealth-card-icon"><span class="icon-svg" style="--icon: url('/static/assets/neura_icons/money.svg');"></span></div>
+                        <div class="stealth-card-data">
+                            <h3>Session Profit</h3>
+                            <p id="economy-profit" style="color:var(--success);">0</p>
+                        </div>
+                    </div>
+                    <div class="stealth-card">
+                        <div class="stealth-card-icon"><span class="icon-svg" style="--icon: url('/static/assets/neura_icons/gem.svg');"></span></div>
+                        <div class="stealth-card-data">
+                            <h3>Gems Equipped</h3>
+                            <p id="economy-gems">0</p>
+                        </div>
+                    </div>
+                    <div class="stealth-card">
+                        <div class="stealth-card-icon"><span class="icon-svg" style="--icon: url('/static/assets/neura_icons/box-open.svg');"></span></div>
+                        <div class="stealth-card-data">
+                            <h3>Lootboxes Opened</h3>
+                            <p id="economy-lootboxes">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stealth-matrix-row" style="margin-top: 20px;">
                     <div class="stealth-card">
                         <div class="stealth-card-icon"><span class="icon-svg" style="--icon: url('/static/assets/neura_icons/user-ninja.svg');"></span></div>
                         <div class="stealth-card-data">

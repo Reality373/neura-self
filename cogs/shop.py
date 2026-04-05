@@ -88,7 +88,7 @@ class Shop(commands.Cog):
                     st = state.account_stats.get(self.bot.user_id, {})
                     st['current_cash'] = int(cash_str)
                     st['last_cash_update'] = time.time()
-                    state.save_account_stats()
+                    state.save_account_stats(self.bot.user_id)
                     self.bot.log("Shop", f"Balance synced: {cash_str} cowoncy")
                     self._pending_cash_check = False
             except Exception:
@@ -101,7 +101,7 @@ class Shop(commands.Cog):
                 st = state.account_stats.get(self.bot.user_id, {})
                 if 'current_cash' in st and st['current_cash'] is not None:
                     st['current_cash'] -= price
-                    state.save_account_stats()
+                    state.save_account_stats(self.bot.user_id)
                     self.bot.log("SUCCESS", f"Shop: Bought item. Balance updated: -{price} cowoncy")
 
     async def _sync_balance(self):

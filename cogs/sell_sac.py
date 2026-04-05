@@ -89,8 +89,8 @@ class SellSac(commands.Cog):
         
         # Phase 20: Deliberation Pause
         await asyncio.sleep(random.uniform(2, 5))
-        # Use the full owo prefix so _fix_command doesn't need to recognize 'sell'
-        await self.bot.neura_enqueue(f"owo sell {sell_cfg.get('type', 'all')}", priority=4)
+        # Periodic sell: Preserve fabled/mythical by only selling common -> epic
+        await self.bot.neura_enqueue("owo sell u c r e", priority=4)
         self.loot_count = 0
         self.loot_threshold = random.randint(5, 15)
 
@@ -137,7 +137,8 @@ class SellSac(commands.Cog):
                 self.bot.log("STEALTH", f"Low funds detected. Human is pausing for {round(frustration_delay, 1)}s in frustration.")
                 await asyncio.sleep(frustration_delay)
                 
-                await self.bot.neura_enqueue(f"owo sell {sell_cfg.get('type', 'all')}", priority=2)
+                # Bankrupt: Sell ALL items unconditionally
+                await self.bot.neura_enqueue("owo sell all", priority=2)
                 self.last_sell_time = time.time()
                 self.bot.log("SYS", "Frustrated AutoSell triggered.")
 

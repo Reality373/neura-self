@@ -35,7 +35,8 @@ stats = {
 
 checking_gems = {}
 missing_gems_cache = {}
-STATS_FILE = os.path.join(DATA_DIR, 'stats.json')
+STATS_DIR = os.path.join(DATA_DIR, 'stats')
+os.makedirs(STATS_DIR, exist_ok=True)
 
 account_stats = {}
 
@@ -66,63 +67,70 @@ def get_empty_stats():
         'next_quest_timer': None,
         'session_hunt_count': 0,
         'session_battle_count': 0,
-        'session_owo_count': 0
+        'session_owo_count': 0,
+        'lootboxes_opened': 0
     }
 
-def save_account_stats():
+def save_account_stats(uid):
+    if uid not in account_stats: return
     try:
-        serializable_stats = {}
-        for uid, st in account_stats.items():
-            serializable_stats[uid] = {
-                'last_reset_date': st.get('last_reset_date'),
-                'captchas_solved': st.get('captchas_solved', 0),
-                'bans_detected': st.get('bans_detected', 0),
-                'warnings_detected': st.get('warnings_detected', 0),
-                'hunt_count': st.get('hunt_count', 0),
-                'battle_count': st.get('battle_count', 0),
-                'owo_count': st.get('owo_count', 0),
-                'total_cmd_count': st.get('total_cmd_count', 0),
-                'other_count': st.get('other_count', 0),
-                'gems_used': st.get('gems_used', 0),
-                'username': st.get('username', 'Unknown'),
-                'quest_data': st.get('quest_data', []),
-                'next_quest_timer': st.get('next_quest_timer'),
-                'current_cash': st.get('current_cash', 0)
-            }
+        st = account_stats[uid]
+        serializable = {
+            'last_reset_date': st.get('last_reset_date'),
+            'captchas_solved': st.get('captchas_solved', 0),
+            'bans_detected': st.get('bans_detected', 0),
+            'warnings_detected': st.get('warnings_detected', 0),
+            'hunt_count': st.get('hunt_count', 0),
+            'battle_count': st.get('battle_count', 0),
+            'owo_count': st.get('owo_count', 0),
+            'total_cmd_count': st.get('total_cmd_count', 0),
+            'other_count': st.get('other_count', 0),
+            'gems_used': st.get('gems_used', 0),
+            'lootboxes_opened': st.get('lootboxes_opened', 0),
+            'username': st.get('username', 'Unknown'),
+            'quest_data': st.get('quest_data', []),
+            'next_quest_timer': st.get('next_quest_timer'),
+            'current_cash': st.get('current_cash', 0)
+        }
         
-        os.makedirs('config', exist_ok=True)
-        with open(STATS_FILE, 'w') as f:
-            json.dump(serializable_stats, f, indent=4)
+        file_path = os.path.join(STATS_DIR, f'stats_{uid}.json')
+        with open(file_path, 'w') as f:
+            json.dump(serializable, f, indent=4)
     except Exception as e:
-        print(f"Error saving stats: {e}")
+        print(f"Error saving stats for {uid}: {e}")
 
 def load_account_stats():
-    if os.path.exists(STATS_FILE):
-        try:
-            with open(STATS_FILE, 'r') as f:
-                saved = json.load(f)
-                today = datetime.datetime.now().strftime("%Y-%m-%d")
-                for uid, st in saved.items():
+    if not os.path.exists(STATS_DIR): return
+    try:
+        today = datetime.datetime.now().strftime("%Y-%m-%d")
+        for filename in os.listdir(STATS_DIR):
+            if filename.startswith('stats_') and filename.endswith('.json'):
+                uid = filename[6:-5]
+                file_path = os.path.join(STATS_DIR, filename)
+                with open(file_path, 'r') as f:
+                    st = json.load(f)
                     new_st = get_empty_stats()
+                    
                     last_date = st.get('last_reset_date')
                     if last_date != today:
+                        # Reset daily counters
                         st['hunt_count'] = 0
                         st['battle_count'] = 0
                         st['owo_count'] = 0
                         st['total_cmd_count'] = 0
                         st['other_count'] = 0
                         st['gems_used'] = 0
+                        st['lootboxes_opened'] = 0
                         st['captchas_solved_today'] = 0
                         st['last_reset_date'] = today
-  
+                    
                     new_st.update(st)
                     new_st['session_hunt_count'] = 0
                     new_st['session_battle_count'] = 0
                     new_st['session_owo_count'] = 0
-                    
                     account_stats[uid] = new_st
-        except Exception as e:
-            print(f"Error loading stats: {e}")
+    except Exception as e:
+        print(f"Error loading stats from directory: {e}")
 
 command_logs = deque(maxlen=1000)
 full_session_history = []
@@ -205,7 +213,7 @@ def log_command(type, message, status="info", bot_name=None, bot_id=None):
                 st['warnings_detected'] = st.get('warnings_detected', 0) + 1
         
         if type in ["SUCCESS", "ALARM", "SECURITY"]:
-            save_account_stats()
+            save_account_stats(bot_id)
         
         if type == "CMD":
             history = ht.load_history()
@@ -226,3 +234,7 @@ def record_snapshot(user_id):
     
     if len(st['cowoncy_history']) > 100:
         st['cowoncy_history'].pop(0)
+
+def save_all_stats():
+    for uid in list(account_stats.keys()):
+        save_account_stats(uid)

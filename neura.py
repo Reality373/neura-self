@@ -12,32 +12,6 @@
 import sys
 import os
 import subprocess
-from importlib.metadata import version, PackageNotFoundError
-
-def ensure_dependencies():
-    target_hash = "20ae80b"
-    try:
-        from importlib.metadata import version
-        if target_hash in version("discord.py-self"):
-            return
-    except:
-        pass
-    
-    is_mobile = os.path.exists("/data/data/com.termux")
-    print(f"\n[!] Missing or wrong library. Repairing (20ae80b)...")
-    
-    try:
-        if is_mobile:
-            subprocess.run(["pkg", "install", "git", "-y"], capture_output=True)
-            
-        subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", "discord.py", "discord.py-self"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "git+https://github.com/dolfies/discord.py-self@20ae80b398ec83fa272f0a96812140e14868c88"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        print("[+] Fixed. Restarting...\n")
-        os.execv(sys.executable, [sys.executable] + sys.argv)
-    except:
-        sys.exit(1)
-
-ensure_dependencies()
 
 import asyncio
 import random
@@ -66,7 +40,7 @@ def show_banner():
         "[#ff0000]  █   ██          ▀▀▀   ▀      █ [/#ff0000]",
         "[#ff0000]                              ▀  [/#ff0000]",
         "[#ff0000]┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈[/#ff0000]",
-        "[bold cyan] N E U R A   S E L F[/bold cyan]  [white]•[/white]  [bold cyan]Made by ROUTO[/bold cyan]",
+        "[bold cyan] N E U R A   S E L F[/bold cyan]  [white]•[/white]  [bold cyan]Made by ROUTO and modified by Reality[/bold cyan]",
         "[#ff0000]┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈[/#ff0000]",
     ]
 
@@ -188,7 +162,13 @@ if __name__ == "__main__":
         try:
             import utils.history_tracker as ht
             ht.end_session()
-            state.save_account_stats()
+            # Proper cleanup for bot sessions
+            for bot in state.bot_instances:
+                asyncio.create_task(bot.cleanup())
+            
+            # Give a brief moment for cleanup tasks to process
+            time.sleep(0.5)
+            state.save_all_stats()
             console.print("\n[bold yellow][!] Systems shut down. History saved.[/bold yellow]")
         except Exception as e:
             # console.print(f"[red]shutdown error: {e}[/red]")
