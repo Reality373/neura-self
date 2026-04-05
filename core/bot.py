@@ -308,8 +308,10 @@ class NeuraBot(commands.Bot):
     async def send_message(self, content, skip_typing=False, priority=False):
         if not self.active: return False
         
-        # Phase 22: Mobile Network Hang Simulation (0.5% chance)
-        if self.is_mobile and random.random() < 0.005:
+        # Phase 22: Mobile Network Hang Simulation (configurable chance)
+        plat_cfg = self.config.get('platform_settings', {})
+        hang_chance = plat_cfg.get('mobile_network_hang_chance', 0.005)
+        if self.is_mobile and random.random() < hang_chance:
              hang_duration = random.uniform(5, 15)
              self.log("STEALTH", f"Mobile: Network hang detected. Waiting {round(hang_duration)}s...")
              await asyncio.sleep(hang_duration)
@@ -620,8 +622,10 @@ class NeuraBot(commands.Bot):
                     if self.paused and "autohunt" not in content.lower() and "check" not in content.lower():
                         continue
                     
-                    # Phase 26: Dithering Delays (10% chance)
-                    if random.random() < 0.10:
+                    # Phase 26: Dithering Delays (configurable chance)
+                    ac_cfg = self.config.get('stealth', {}).get('activity_clustering', {})
+                    dither_chance = ac_cfg.get('dithering_chance', 0.10)
+                    if random.random() < dither_chance:
                          dither_delay = random.uniform(3.0, 7.0)
                          self.log("STEALTH", f"Dithering: Human is hesitating before sending '{cmd_id}' (+{round(dither_delay, 1)}s)...")
                          await asyncio.sleep(dither_delay)
@@ -648,9 +652,20 @@ class NeuraBot(commands.Bot):
                     stealth_cfg = self.config.get('stealth', {})
                     from modules.stealth_curiosity import evaluate_curiosity_trigger
                     await evaluate_curiosity_trigger(self, stealth_cfg)
+                    
+                    from modules.stealth_circadian import handle_circadian_rhythm
+                    await handle_circadian_rhythm(self, stealth_cfg)
+                    
+                    is_resting = getattr(self, 'is_sleeping', False) or getattr(self, 'is_on_break', False)
+                    if is_resting and priority >= 3:
+                        if cmd_id and cmd_id in self.cmd_states:
+                             self.cmd_states[cmd_id]['last_ran'] = time.time()
+                        continue # Drop routine scheduled actions while resting, let queue handle dashboard actions
 
                     if priority in [2, 4]:
-                        thinking_delay = random.uniform(1.5, 4.0)
+                        delib_cfg = self.config.get('stealth', {}).get('deliberation_pauses', {})
+                        delib_range = delib_cfg.get('utility', [3, 8]) if priority == 4 else delib_cfg.get('social', [2, 6])
+                        thinking_delay = random.uniform(delib_range[0], delib_range[1]) if isinstance(delib_range, list) else random.uniform(1.5, 4.0)
                         await asyncio.sleep(thinking_delay)
 
                     if cmd_id and cmd_id in self.cmd_states:
@@ -668,12 +683,15 @@ class NeuraBot(commands.Bot):
                     # Phase 26: Activity Burst Logic
                     if priority >= 3: # Only count grinding towards bursts
                          self.current_burst_count += 1
+                         ac_burst = self.config.get('stealth', {}).get('activity_clustering', {})
                          if self.current_burst_count >= self.burst_limit:
-                              burp_pause = random.uniform(15.0, 45.0)
+                              mb_range = ac_burst.get('mini_break_range', [15, 45])
+                              burp_pause = random.uniform(mb_range[0], mb_range[1]) if isinstance(mb_range, list) else random.uniform(15.0, 45.0)
                               self.log("STEALTH", f"Activity Burst: Finished burst of {self.current_burst_count} commands. Mini-break: {round(burp_pause)}s.")
                               await asyncio.sleep(burp_pause)
                               self.current_burst_count = 0
-                              self.burst_limit = random.randint(2, 6)
+                              bl_range = ac_burst.get('burst_limit', [2, 5])
+                              self.burst_limit = random.randint(bl_range[0], bl_range[1]) if isinstance(bl_range, list) else random.randint(2, 6)
                     
                     if cmd_id and cmd_id in self.cmd_states:
                         if cmd_id in ["rpp", "quest", "level_quotes", "huntbot", "daily", "cookie", "coinflip", "slots"]:
@@ -723,7 +741,7 @@ class NeuraBot(commands.Bot):
                 now = time.time()
                 delta_last_sent = now - self.last_sent_time
                 past_warmup = now > self.warmup_until
-                if delta_last_sent > 25 and not self.paused and self.last_sent_time != 0 and past_warmup:
+                if delta_last_sent > 25 and not self.paused and not self.is_sleeping and self.last_sent_time != 0 and past_warmup:
                     # Increment consecutive_failures so the Phase 6 escape hatch can trigger
                     uid = self.user_id
                     if uid not in state.account_stats:
@@ -823,7 +841,7 @@ class NeuraBot(commands.Bot):
 
                 # New: Ghost Typing / Lurking Presence (Phase 10/18)
                 # 0.5% chance to just "type" for a few seconds to look human
-                if random.random() < 0.005: 
+                if random.random() < 0.005 and not self.is_sleeping: 
                     ch = self.get_channel(self.channel_id) if self.channel_id else None
                     if ch:
                         async with ch.typing():

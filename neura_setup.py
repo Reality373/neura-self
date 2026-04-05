@@ -365,25 +365,59 @@ async def apply_stealth_v2():
     
     if not os.path.exists(v2_path):
         console.print("[bold red][!] settings_v2.json not found![/bold red]")
-        console.print("[dim]Please ensure Antigravity has generated the v2 template first.[/dim]")
+        console.print("[dim]Please ensure your v2 template is placed in the config/ directory.[/dim]")
         time.sleep(2)
         return
 
-    console.print("[cyan][*] Migrating 32-phase humanization parameters...[/cyan]")
+    console.print("[cyan][*] Migrating 33-phase humanization parameters...[/cyan]")
     try:
         with open(v2_path, 'r') as f:
             v2_data = json.load(f)
         
+        # 1. Update global settings.json
         with open(main_path, 'w') as f:
             json.dump(v2_data, f, indent=4)
+        console.print("[green]  [✓] Global settings.json updated.[/green]")
+        
+        # 2. Deep-merge v2 stealth/platform params into all per-account settings
+        updated_accounts = 0
+        for fname in os.listdir(state.CONFIG_DIR):
+            if fname.startswith('settings_') and fname.endswith('.json') and fname != 'settings_v2.json':
+                acc_path = os.path.join(state.CONFIG_DIR, fname)
+                try:
+                    with open(acc_path, 'r') as f:
+                        acc_data = json.load(f)
+                    
+                    # Deep-merge stealth, platform_settings, and security sections
+                    for section in ['stealth', 'platform_settings', 'security', 'core']:
+                        if section in v2_data:
+                            if section not in acc_data:
+                                acc_data[section] = {}
+                            _deep_merge(acc_data[section], v2_data[section])
+                    
+                    with open(acc_path, 'w') as f:
+                        json.dump(acc_data, f, indent=4)
+                    updated_accounts += 1
+                    console.print(f"[green]  [✓] {fname} updated.[/green]")
+                except Exception as e:
+                    console.print(f"[yellow]  [!] Skipped {fname}: {e}[/yellow]")
             
-        console.print("\n[bold green][✓] SUCCESS![/bold green]")
-        console.print("[white]Your active settings.json has been updated with the absolute stealth profile.[/white]")
-        console.print("[dim]Every account will now inherit the individual persona and fatigue logic.[/dim]")
+        console.print(f"\n[bold green][✓] SUCCESS![/bold green]")
+        console.print(f"[white]Updated global settings + {updated_accounts} account-specific configs.[/white]")
+        console.print("[dim]Every account will now inherit the absolute stealth profile.[/dim]")
+        console.print("[dim]Restart NeuraSelf for changes to take effect.[/dim]")
         time.sleep(3)
     except Exception as e:
         console.print(f"[bold red][!] Migration failed: {e}[/bold red]")
         time.sleep(2)
+
+def _deep_merge(base, override):
+    """Recursively merge override into base dict."""
+    for key, value in override.items():
+        if isinstance(value, dict) and key in base and isinstance(base[key], dict):
+            _deep_merge(base[key], value)
+        else:
+            base[key] = value
 
 if __name__ == "__main__":
     run_bootstrap()

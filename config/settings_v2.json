@@ -60,13 +60,13 @@
         "coinflip": {
             "enabled": false,
             "use_shortform": true,
-            "amount": 400,
+            "amount": [100, 500],
             "side": "h"
         },
         "slots": {
             "enabled": false,
             "use_shortform": true,
-            "amount": 1
+            "amount": [100, 500]
         },
         "sell_sac": {
             "sell": {
@@ -76,7 +76,7 @@
                     5,
                     15
                 ],
-                "balance_verify_chance": 0.20,
+                "balance_verify_chance": 0.2,
                 "min_cash_trigger": 1000
             },
             "sacrifice": {
@@ -220,7 +220,7 @@
                 15,
                 45
             ],
-            "dithering_chance": 0.10
+            "dithering_chance": 0.1
         },
         "session": {
             "circadian_rhythm": {

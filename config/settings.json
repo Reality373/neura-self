@@ -60,13 +60,19 @@
         "coinflip": {
             "enabled": false,
             "use_shortform": true,
-            "amount": [100, 500],
+            "amount": [
+                100,
+                500
+            ],
             "side": "h"
         },
         "slots": {
             "enabled": false,
             "use_shortform": true,
-            "amount": [100, 500]
+            "amount": [
+                100,
+                500
+            ]
         },
         "sell_sac": {
             "sell": {

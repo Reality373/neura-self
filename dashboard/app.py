@@ -407,6 +407,15 @@ def control():
         bot.throttle_until = 0
         bot.log("SYS", "Bot RESUMED via Dashboard")
             
+    elif action == 'wakeup':
+        bot.is_sleeping = False
+        bot.is_on_break = False
+        bot.throttle_until = 0
+        asyncio.run_coroutine_threadsafe(
+            bot.neura_enqueue("cash", priority=0, _cmd_id="cash"), bot.loop
+        )
+        bot.log("SYS", "Bot manually WOKEN UP from resting state via Dashboard")
+        
     elif action == 'cash':
         asyncio.run_coroutine_threadsafe(
             bot.send_message(f"{bot.prefix}cash", skip_typing=True, priority=True),

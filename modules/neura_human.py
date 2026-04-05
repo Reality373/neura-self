@@ -33,9 +33,7 @@ class NeuraHuman:
         await handle_circadian_rhythm(bot, stealth_cfg)
         
         if bot.is_on_break:
-            bot.log("STEALTH", "Waiting for existing break to finish...")
-            while bot.is_on_break:
-                await asyncio.sleep(1)
+            bot.log("STEALTH", "Executing during break (Priority/Bypass action)...")
 
         # Phase 23: Post-Captcha Stress Scaling
         stress_active = time.time() < bot.stress_until
@@ -79,32 +77,35 @@ class NeuraHuman:
                     bot.is_on_break = True
                     start_break_time = time.time()
                     bot.log("STEALTH", f"Pausing for {int(hb_duration/60)}mins (Break Time)")
-                    try:
-                        while bot.is_on_break:
-                            curr_stealth = bot.config.get('stealth', {})
-                            curr_hb = curr_stealth.get('human_break', {})
-                            
-                            if not curr_hb.get('enabled', True):
-                                bot.log("STEALTH", "Break interrupted: Human Break disabled in settings.")
-                                break
-                            
-                            raw_dur = curr_hb.get('duration_min', 10)
-                            curr_duration = (random.uniform(raw_dur[0], raw_dur[1]) if isinstance(raw_dur, list) else raw_dur) * 60
-                            if time.time() - start_break_time >= curr_duration:
-                                break
+                    
+                    async def break_task_runner():
+                        try:
+                            while bot.is_on_break:
+                                curr_stealth = bot.config.get('stealth', {})
+                                curr_hb = curr_stealth.get('human_break', {})
                                 
-                            await asyncio.sleep(1)
-                    finally:
-                        bot.last_break_check = time.time()
-                        bot.is_on_break = False
-                        bot.current_break_interval = hb_base_interval * (1 + random.uniform(-0.15, 0.15))
-                        bot.session_mode = random.choices(['BINGE', 'CASUAL'], weights=[0.4, 0.6])[0]
-                        bot.log("STEALTH", f"Break finished. Simulating app warmup (5-12s)...")
-                        await asyncio.sleep(random.uniform(5.0, 12.0))
-                        bot.log("STEALTH", f"Warmup finished. Resuming operations. Mode: {bot.session_mode}")
+                                if not curr_hb.get('enabled', True):
+                                    bot.log("STEALTH", "Break interrupted: Human Break disabled in settings.")
+                                    break
+                                
+                                raw_dur = curr_hb.get('duration_min', 10)
+                                curr_duration = (random.uniform(raw_dur[0], raw_dur[1]) if isinstance(raw_dur, list) else raw_dur) * 60
+                                if time.time() - start_break_time >= curr_duration:
+                                    break
+                                    
+                                await asyncio.sleep(1)
+                        finally:
+                            bot.last_break_check = time.time()
+                            bot.is_on_break = False
+                            bot.current_break_interval = hb_base_interval * (1 + random.uniform(-0.15, 0.15))
+                            bot.session_mode = random.choices(['BINGE', 'CASUAL'], weights=[0.4, 0.6])[0]
+                            bot.log("STEALTH", f"Break finished. Simulating app warmup (5-12s)...")
+                            await asyncio.sleep(random.uniform(5.0, 12.0))
+                            bot.log("STEALTH", f"Warmup finished. Resuming operations. Mode: {bot.session_mode}")
+                    
+                    asyncio.create_task(break_task_runner())
                 elif bot.is_on_break:
-                     while bot.is_on_break:
-                        await asyncio.sleep(1)
+                     pass
                         
         if bot.session_mode == 'CASUAL' or stress_active:
             casual_delay = random.uniform(1.0, 5.0)
@@ -148,16 +149,22 @@ class NeuraHuman:
         else:
             mistake_rate = mistake_rate * platform_error_mult
             
-        # Phase 7: Determine fatigue overhead (up to 0.5s increase after 4h)
+        # Phase 7: Determine fatigue overhead (configurable via fatigue_simulation)
+        fatigue_cfg = stealth_cfg.get('session', {}).get('fatigue_simulation', {})
+        max_fatigue_delay = fatigue_cfg.get('slowdown_factor', 1.2) - 1.0  # Convert 1.2x to +0.2s max overhead
+        burnout_mins = fatigue_cfg.get('burnout_rest_min', [20, 40])
+        burnout_threshold = (random.uniform(burnout_mins[0], burnout_mins[1]) if isinstance(burnout_mins, list) else burnout_mins) * 60 * 60 / 10  # Convert to seconds of session time
         session_duration = time.time() - getattr(bot, 'start_time', time.time())
-        fatigue_factor = min(0.5, (session_duration / 14400) * 0.5) 
+        fatigue_factor = min(max_fatigue_delay, (session_duration / max(1, burnout_threshold)) * max_fatigue_delay) 
 
         reaction_time = (random.uniform(reaction_min, reaction_max) * intensity_factor * platform_delay_mult)
         
         # Phase 22: Desktop Window Focus Delay (2-5s)
         # First message after a long break or startup on Desktop
         if not bot.is_mobile and time.time() - getattr(bot, 'last_sent_time', 0) > 600:
-             refocus_delay = random.uniform(2, 5)
+             plat_cfg = bot.config.get('platform_settings', {})
+             refocus_range = plat_cfg.get('desktop_refocus_delay', [2, 5])
+             refocus_delay = random.uniform(refocus_range[0], refocus_range[1]) if isinstance(refocus_range, list) else random.uniform(2, 5)
              reaction_time += refocus_delay
              bot.log("STEALTH", f"Desktop: Simulating window refocus delay (+{round(refocus_delay, 1)}s)")
         
