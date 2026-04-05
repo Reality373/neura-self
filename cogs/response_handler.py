@@ -65,6 +65,11 @@ class ResponseHandler(commands.Cog):
         if str(message.channel.id) not in all_channels:
             return
 
+        # Phase 6: Reset unresponsive counter when OwO responds
+        uid = self.bot.user_id
+        if uid in state.account_stats:
+            state.account_stats[uid]['consecutive_failures'] = 0
+
         full_content = self.bot.get_full_content(message)
         await self._handle_cooldowns(full_content, message)
         
@@ -99,8 +104,8 @@ class ResponseHandler(commands.Cog):
                 if lq:
                     quotes.append(lq.get_random_quote(5, 50))
                 
-                # FIX: Removed channel argument from neura_send
-                await self.bot.neura_send(random.choice(quotes))
+                # FIX: Use neura_enqueue instead of non-existent neura_send
+                await self.bot.neura_enqueue(random.choice(quotes), priority=5)
 
     async def _handle_success(self, content, message):
         now = time.time()
@@ -193,7 +198,7 @@ class ResponseHandler(commands.Cog):
                 
                 self.bot.log("STEALTH", f"Precision Hit: Resending '{last_cmd}' exactly on time.")
                 # Force resend without further scheduler overhead
-                await self.bot.neura_send(last_cmd)
+                await self.bot.neura_enqueue(last_cmd, priority=2)
 
             asyncio.create_task(_precision_resend())
             return True
@@ -224,7 +229,7 @@ class ResponseHandler(commands.Cog):
                     delay = random.uniform(2.5, 6.0)
                     await asyncio.sleep(delay)
                     self.bot.log("STEALTH", f"Ambient Mimicry: Reacting with '{filler}'")
-                    await self.bot.neura_send(filler)
+                    await self.bot.neura_enqueue(filler, priority=5)
                     break
 
 async def setup(bot):

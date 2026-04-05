@@ -3,7 +3,8 @@ import random
 from datetime import datetime
 
 async def handle_circadian_rhythm(bot, stealth_cfg):
-    cr_cfg = stealth_cfg.get('circadian_rhythm', {})
+    session_cfg = stealth_cfg.get('session', {})
+    cr_cfg = session_cfg.get('circadian_rhythm', stealth_cfg.get('circadian_rhythm', {}))
     if not cr_cfg.get('enabled', False):
         return
         
@@ -45,7 +46,7 @@ async def handle_circadian_rhythm(bot, stealth_cfg):
                 bot.is_sleeping = False
                 bot.session_mode = random.choices(['BINGE', 'CASUAL'], weights=[0.4, 0.6])[0]
                 
-                force_persona = stealth_cfg.get('force_persona', 'auto').upper()
+                force_persona = session_cfg.get('force_persona', stealth_cfg.get('force_persona', 'auto')).upper()
                 if force_persona != 'AUTO':
                      bot.session_persona = force_persona
                 else: 

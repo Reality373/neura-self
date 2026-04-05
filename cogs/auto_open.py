@@ -10,6 +10,7 @@
 # along with NeuraSelf-UwU. If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
+import random
 import time
 import re
 from discord.ext import commands

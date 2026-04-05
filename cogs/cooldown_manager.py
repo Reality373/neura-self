@@ -10,6 +10,7 @@
 # along with NeuraSelf-UwU. If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
+import random
 import re
 import time
 import core.state as state

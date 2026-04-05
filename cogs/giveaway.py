@@ -14,7 +14,9 @@ import time
 import json
 import os
 import discord
+import random
 from discord.ext import commands
+
 
 class Giveaway(commands.Cog):
     def __init__(self, bot):
@@ -52,8 +54,8 @@ class Giveaway(commands.Cog):
         else:
             target_channels = [str(c) for c in raw_channels if str(c).strip().isdigit()]
 
-        all_channels = [str(c) for c in self.bot.channels]
-        if str(message.channel.id) not in all_channels:
+        # Fix: filter against the giveaway-specific target_channels, not all bot channels
+        if target_channels and str(message.channel.id) not in target_channels:
             return
 
         if not message.embeds: return
@@ -126,10 +128,18 @@ class Giveaway(commands.Cog):
                      except Exception as e:
                         continue
                 
-                if channel:
-                    permissions = channel.permissions_for(channel.guild.me)
+                if channel and hasattr(channel, 'guild') and channel.guild:
+                    me = channel.guild.me
+                    if not me: 
+                        try:
+                            me = await channel.guild.fetch_member(self.bot.user.id)
+                        except:
+                            continue
+                            
+                    permissions = channel.permissions_for(me)
                     if not permissions.read_messages or not permissions.read_message_history:
                         continue
+
 
                     try:
                         async for msg in channel.history(limit=20):

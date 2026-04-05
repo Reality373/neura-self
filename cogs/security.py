@@ -88,9 +88,11 @@ class Security(commands.Cog):
             if mobile.get('enabled', True):
                 try:
                     os.system(f'termux-notification --title "{self.notification_title}" --content "{message}"')
-                    vib = mobile.get('vibrate', {})
-                    if vib.get('enabled', True):
-                        raw_time = vib.get('time', 0.5)
+                    vib = mobile.get('vibrate', True)
+                    # Handle both bool and dict config formats safely
+                    vib_enabled = vib if isinstance(vib, bool) else vib.get('enabled', True)
+                    if vib_enabled:
+                        raw_time = vib.get('time', 0.5) if isinstance(vib, dict) else 0.5
                         if isinstance(raw_time, list):
                             raw_time = random.uniform(raw_time[0], raw_time[1])
                         duration = int(raw_time * 1000)

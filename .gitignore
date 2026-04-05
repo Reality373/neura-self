@@ -41,11 +41,13 @@ tokens.txt
 venv/
 env/
 ENV/
+neura-env/
 .venv/
 .ENV/
 .env/
 .env.*
 .virtualenv/
+
 
 # ===============================
 # PyInstaller
@@ -123,4 +125,6 @@ Desktop.ini
 *.sqlite
 *.sqlite3
 *.db
+config/accounts.json
+config/accounts.json
 config/accounts.json

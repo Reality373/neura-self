@@ -89,7 +89,8 @@ class SellSac(commands.Cog):
         
         # Phase 20: Deliberation Pause
         await asyncio.sleep(random.uniform(2, 5))
-        await self.bot.neura_enqueue(f"sell {sell_cfg.get('type', 'all')}", priority=4)
+        # Use the full owo prefix so _fix_command doesn't need to recognize 'sell'
+        await self.bot.neura_enqueue(f"owo sell {sell_cfg.get('type', 'all')}", priority=4)
         self.loot_count = 0
         self.loot_threshold = random.randint(5, 15)
 
@@ -102,7 +103,7 @@ class SellSac(commands.Cog):
              
         await asyncio.sleep(random.uniform(2, 5))
         cmd = "sc" if sac_cfg.get('use_shortform', False) else "sacrifice"
-        await self.bot.neura_enqueue(f"{cmd} {sac_cfg.get('type', 'all')}", priority=4)
+        await self.bot.neura_enqueue(f"owo {cmd} {sac_cfg.get('type', 'all')}", priority=4)
 
     @commands.Cog.listener()
     async def on_message(self, message):
@@ -136,7 +137,7 @@ class SellSac(commands.Cog):
                 self.bot.log("STEALTH", f"Low funds detected. Human is pausing for {round(frustration_delay, 1)}s in frustration.")
                 await asyncio.sleep(frustration_delay)
                 
-                await self.bot.neura_enqueue(f"sell {sell_cfg.get('type', 'all')}", priority=2)
+                await self.bot.neura_enqueue(f"owo sell {sell_cfg.get('type', 'all')}", priority=2)
                 self.last_sell_time = time.time()
                 self.bot.log("SYS", "Frustrated AutoSell triggered.")
 

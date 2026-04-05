@@ -173,9 +173,11 @@ async def main():
             
         console.print("[bold green]All accounts are now connecting in background...[/bold green]")
 
-        while True:
-            await asyncio.sleep(60)
-        break
+        try:
+            while True:
+                await asyncio.sleep(60)
+        except asyncio.CancelledError:
+            pass
 
 if __name__ == "__main__":
     try:

@@ -26,7 +26,6 @@ from modules.identity import IdentityManager
 from modules.interactions import setup_interactions
 from modules.captcha_solver import setup_solver
 from modules.web_solver import setup_web_solver
-import core.state as state
 import aiohttp
 import unicodedata
 import logging
@@ -46,7 +45,6 @@ class NeuraBot(commands.Bot):
         self.config = {}
         self.accounts = []
         self.token = token
-        self.channels = channels or []
         self.channels = channels or []
         self._load_config()
         
@@ -333,11 +331,13 @@ class NeuraBot(commands.Bot):
                     if "huntbot" not in cmd_clean and "autohunt" not in cmd_clean:
                         return False
 
+            # Fix: _send_safe also calls _fix_command internally, so we track
+            # the fixed version for logging but pass original to _send_safe.
             fixed_content = self._fix_command(content)
             self.last_sent_command = fixed_content
             self.last_sent_time = time.time()
             
-            success = await self._send_safe(fixed_content, skip_typing=skip_typing)
+            success = await self._send_safe(content, skip_typing=skip_typing)
             return success
     
     @property
@@ -566,7 +566,7 @@ class NeuraBot(commands.Bot):
             wrong = content.lower().replace("hunt", "hnt").replace("battle", "btl").replace("cash", "csh").replace("pray", "pary")
             if wrong != content.lower():
                 self.log("STEALTH", f"Human made a typo: sending '{wrong}' first...")
-                asyncio.create_task(self.neura_send(wrong))
+                asyncio.create_task(self._send_safe(wrong))
                 await asyncio.sleep(random.uniform(2.5, 4.5))
                 self.log("STEALTH", "Correcting typo now...")
 
@@ -718,11 +718,20 @@ class NeuraBot(commands.Bot):
 
                 # Phase 14: OwO Lag Detection
                 # If command sent > 25s ago and no success, simulate user getting annoyed.
+                # Only fire after first command has been sent (last_sent_time != 0) and
+                # after the warmup window has passed to avoid false startup alarms.
                 now = time.time()
                 delta_last_sent = now - self.last_sent_time
-                if delta_last_sent > 25 and not self.paused and self.last_sent_time != 0:
+                past_warmup = now > self.warmup_until
+                if delta_last_sent > 25 and not self.paused and self.last_sent_time != 0 and past_warmup:
+                    # Increment consecutive_failures so the Phase 6 escape hatch can trigger
+                    uid = self.user_id
+                    if uid not in state.account_stats:
+                        state.account_stats[uid] = state.get_empty_stats()
+                    state.account_stats[uid]['consecutive_failures'] = state.account_stats[uid].get('consecutive_failures', 0) + 1
+                    
                     wait_time = random.uniform(45.0, 120.0)
-                    self.log("ALARM", f"Bot appears unresponsive (25s+). Pausing for {round(wait_time)}s.")
+                    self.log("ALARM", f"Bot appears unresponsive (25s+, streak: {state.account_stats[uid]['consecutive_failures']}). Pausing for {round(wait_time)}s.")
                     self.throttle_until = now + wait_time
                     self.last_sent_time = now # prevent re-triggering until next command
                     continue
@@ -745,28 +754,34 @@ class NeuraBot(commands.Bot):
                 # Phase 20: Forgetfulness Logic (0.1% chance to skip utility for 60-120s)
                 forgetfulness_roll = random.random()
                 
-                for cmd_id, state in items:
-                    if state["in_queue"]: continue
+                # Phase 16: Human Stealth Factor Scaling
+                stealth_factor = self.config.get('core', {}).get('human_stealth_factor', 0.5)
+                
+                # Phase 21: Persona-Driven Skip Scaling
+                from modules.stealth_circadian import get_session_persona
+                persona = get_session_persona(self)
+                
+                for cmd_id, cmd_state in items:
+
+                    if cmd_state["in_queue"]: continue
+
                     
                     # Forget utility commands occasionally
-                    if state["priority"] >= 4 and forgetfulness_roll < 0.001:
+                    if cmd_state["priority"] >= 4 and forgetfulness_roll < 0.001:
                          self.log("STEALTH", f"Forgetfulness: Human forgot to check '{cmd_id}'. Retrying in 1-2 mins...")
-                         state["last_ran"] = now - (state["delay"] - random.randint(60, 120))
+                         cmd_state["last_ran"] = now - (cmd_state["delay"] - random.randint(60, 120))
                          continue
                     
                     # New: Adaptive Startup Ramping (Phase 8)
                     # Apply up to +25% delay that decays over 30 mins
                     session_duration = now - self.start_time
                     ramp_factor = max(0.0, 0.25 * (1 - (session_duration / 1800)))
-                    actual_delay = state["delay"] * (1 + ramp_factor)
+                    actual_delay = cmd_state["delay"] * (1 + ramp_factor)
 
-                    if now - state["last_ran"] >= actual_delay:
-                        # Phase 16: Human Stealth Factor Scaling
-                        stealth_factor = self.config.get('core', {}).get('human_stealth_factor', 0.5)
-                        
-                        # Phase 21: Persona-Driven Skip Scaling
-                        from modules.stealth_circadian import get_session_persona
-                        persona = get_session_persona()
+                    if now - cmd_state["last_ran"] >= actual_delay:
+
+# Persona already defined at loop start
+
                         
                         skip_chance = 0.01 # Base (Grinder)
                         if persona == 'CASUAL':
@@ -778,21 +793,21 @@ class NeuraBot(commands.Bot):
                              elif cmd_id in ['shop_buy', 'shop_cash_sync', 'open_lootbox', 'open_crate']:
                                   skip_chance = 0.0
                         
-                        if state["priority"] == 3 and random.random() < (skip_chance * stealth_factor):
+                        if cmd_state["priority"] == 3 and random.random() < (skip_chance * stealth_factor):
                             self.log("STEALTH", f"Persona ({persona}) is distracted: Skipping {cmd_id} for this cycle.")
-                            state["last_ran"] = now
+                            cmd_state["last_ran"] = now
                             continue
+
                             
                         # Phase 18: Dynamic Priority Flip (5% chance to re-order)
                         # Phase 19: Command Priority Tossing (Utility Swap)
-                        actual_priority = state["priority"]
+                        actual_priority = cmd_state["priority"]
                         if random.random() < 0.05 and actual_priority >= 3:
                              # Swap 3 <-> 4 to vary execution order
                              actual_priority = 4 if actual_priority == 3 else 3
                              
-                        state["in_queue"] = True
-                        state["priority"] = actual_priority
-                        actual_content = state["content"]
+                        cmd_state["in_queue"] = True
+                        actual_content = cmd_state["content"]
                         if callable(actual_content):
                             if asyncio.iscoroutinefunction(actual_content):
                                 actual_content = await actual_content()
@@ -800,10 +815,11 @@ class NeuraBot(commands.Bot):
                                 actual_content = actual_content()
                         
                         if actual_content is not None:
-                            asyncio.create_task(self.neura_enqueue(actual_content, priority=state["priority"], _cmd_id=cmd_id))
+                            asyncio.create_task(self.neura_enqueue(actual_content, priority=actual_priority, _cmd_id=cmd_id))
                         else:
-                            state["in_queue"] = False
-                            state["last_ran"] = time.time()
+                            cmd_state["in_queue"] = False
+                            cmd_state["last_ran"] = time.time()
+
 
                 # New: Ghost Typing / Lurking Presence (Phase 10/18)
                 # 0.5% chance to just "type" for a few seconds to look human

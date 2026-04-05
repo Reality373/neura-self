@@ -15,6 +15,23 @@ import random
 import core.state as state
 from discord.ext import commands
 
+def _pick_amount(cfg_amount):
+    """Pick a random gambling amount from config.
+    
+    Supports:
+      - int/float: single fixed amount (e.g. 400)
+      - list [min, max]: random amount in multiples of 100 within range (e.g. [100, 1000])
+    """
+    if isinstance(cfg_amount, list) and len(cfg_amount) >= 2:
+        low = int(cfg_amount[0])
+        high = int(cfg_amount[1])
+        # Round to nearest 100 boundaries
+        low_r = max(100, (low + 99) // 100 * 100)   # round UP to nearest 100
+        high_r = max(low_r, high // 100 * 100)       # round DOWN to nearest 100
+        steps = (high_r - low_r) // 100 + 1
+        return low_r + random.randint(0, steps - 1) * 100
+    return int(cfg_amount) if cfg_amount else 1
+
 class Gambling(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -23,20 +40,20 @@ class Gambling(commands.Cog):
         
     def trigger_coinflip(self):
         cfg = self.bot.config.get('commands', {}).get('coinflip', {})
-        amount = cfg.get('amount', 1)
+        amount = _pick_amount(cfg.get('amount', 1))
         side = cfg.get('side', 'h')
         
         self.bot.cmd_states['coinflip']['content'] = f"cf {side} {amount}"
-        self.bot.cmd_states['coinflip']['delay'] = random.uniform(45, 180) # Phase 9: Relaxed gambling
-        state.stats['coinflip_count'] = state.stats.get('coinflip_count', 0) + 1
+        self.bot.cmd_states['coinflip']['delay'] = random.uniform(45, 180)
+        self.bot.stats['coinflip_count'] = self.bot.stats.get('coinflip_count', 0) + 1
 
     def trigger_slots(self):
         cfg = self.bot.config.get('commands', {}).get('slots', {})
-        amount = cfg.get('amount', 1)
+        amount = _pick_amount(cfg.get('amount', 1))
         
         self.bot.cmd_states['slots']['content'] = f"slots {amount}"
-        self.bot.cmd_states['slots']['delay'] = random.uniform(45, 180) # Phase 9: Relaxed gambling
-        state.stats['slots_count'] = state.stats.get('slots_count', 0) + 1
+        self.bot.cmd_states['slots']['delay'] = random.uniform(45, 180)
+        self.bot.stats['slots_count'] = self.bot.stats.get('slots_count', 0) + 1
 
     async def register_actions(self):
         cfg_cf = self.bot.config.get('commands', {}).get('coinflip', {})

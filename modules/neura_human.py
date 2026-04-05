@@ -88,7 +88,8 @@ class NeuraHuman:
                                 bot.log("STEALTH", "Break interrupted: Human Break disabled in settings.")
                                 break
                             
-                            curr_duration = curr_hb.get('duration_min', 10) * 60
+                            raw_dur = curr_hb.get('duration_min', 10)
+                            curr_duration = (random.uniform(raw_dur[0], raw_dur[1]) if isinstance(raw_dur, list) else raw_dur) * 60
                             if time.time() - start_break_time >= curr_duration:
                                 break
                                 
