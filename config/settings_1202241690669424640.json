@@ -58,15 +58,15 @@
             "enabled": true
         },
         "coinflip": {
-            "enabled": false,
+            "enabled": true,
             "use_shortform": true,
             "amount": 400,
             "side": "h"
         },
         "slots": {
-            "enabled": false,
+            "enabled": true,
             "use_shortform": true,
-            "amount": 1
+            "amount": 500
         },
         "sell_sac": {
             "sell": {
@@ -263,8 +263,8 @@
     "security": {
         "enabled": true,
         "reaction_lag_range": [
-            2.0,
-            5.0
+            2,
+            5
         ],
         "stray_command_on_alert": 0.15,
         "captcha_solver": {
@@ -274,7 +274,7 @@
         "open_captcha_url_on_pc": true,
         "captcha": {
             "uncertainty_error_chance": 0.04,
-            "self_correction_delay": 2.0,
+            "self_correction_delay": 2,
             "post_captcha_stress_min": 20,
             "ghost_confusion_typing": 0.02
         },
@@ -302,11 +302,11 @@
     "boss": {
         "enabled": true,
         "reaction_time": [
-            1.0,
-            4.0
+            1,
+            4
         ],
         "join_all_guilds": false,
-        "join_chance": 1.0,
+        "join_chance": 1,
         "ignore_guilds": []
     },
     "level_grind": {

@@ -40,10 +40,18 @@ class NeuraHuman:
         
         # Phase 18: Burnout scaling (Distraction chance)
         session_duration = time.time() - bot.start_time
+        persona = getattr(bot, 'session_persona', 'CASUAL')
+        mode = getattr(bot, 'session_mode', 'CASUAL')
+        
         lurk_chance = 0.02
         if session_duration > 14400: # 4 Hours
             lurk_chance = 0.10
-        
+            
+        if persona == 'GRINDER' and mode == 'BINGE':
+            lurk_chance = 0.001
+        elif persona == 'GRINDER':
+            lurk_chance = 0.005
+            
         if stress_active:
              lurk_chance *= 3 # 3x distraction chance while stressed
              if random.random() < 0.001:
@@ -64,6 +72,10 @@ class NeuraHuman:
 
         hb_duration = get_val(hb_cfg.get('duration_min', 10), 10) * 60
         hb_base_interval = get_val(hb_cfg.get('interval_min', 45), 45) * 60
+        
+        if persona == 'GRINDER':
+            hb_duration *= 0.3 # 70% shorter breaks
+            hb_base_interval *= 2.5 # Wait 2.5x longer between breaks
         
         if bot.current_break_interval is None:
             bot.current_break_interval = hb_base_interval * (1 + random.uniform(-0.15, 0.15))

@@ -76,6 +76,7 @@ class ResponseHandler(commands.Cog):
         await self._handle_battle_results(full_content, message)
         
         if self.bot.is_message_for_me(message):
+            self.bot.last_sent_time = 0
             await self._handle_success(full_content, message)
             await self._handle_status_updates(full_content, message)
         

@@ -601,9 +601,18 @@ class NeuraBot(commands.Bot):
                     
                     # Phase 26: Interval Drifting (Every 5 mins)
                     if time.time() - self.last_interval_drift > 300:
-                         self.current_drifted_min_interval = random.uniform(1.8, 3.5)
+                         persona = getattr(self, 'session_persona', 'CASUAL')
+                         mode = getattr(self, 'session_mode', 'CASUAL')
+                         
+                         if persona == 'GRINDER' and mode == 'BINGE':
+                             self.current_drifted_min_interval = random.uniform(0.5, 1.2)
+                         elif persona == 'GRINDER':
+                             self.current_drifted_min_interval = random.uniform(1.2, 2.0)
+                         else:
+                             self.current_drifted_min_interval = random.uniform(1.8, 3.5)
+                             
                          self.last_interval_drift = time.time()
-                         self.log("STEALTH", f"Interval Drift: Base command spacing now {round(self.current_drifted_min_interval, 1)}s.")
+                         self.log("STEALTH", f"Interval Drift: Base command spacing now {round(self.current_drifted_min_interval, 1)}s. (Persona: {persona}, Mode: {mode})")
 
                     # Phase 26: Relationship Relationship Follow-up (Hunt -> Battle)
                     # If we just sent hunt, and battle is next in queue, reduce wait to human reaction speed.
@@ -625,8 +634,12 @@ class NeuraBot(commands.Bot):
                     # Phase 26: Dithering Delays (configurable chance)
                     ac_cfg = self.config.get('stealth', {}).get('activity_clustering', {})
                     dither_chance = ac_cfg.get('dithering_chance', 0.10)
+                    persona = getattr(self, 'session_persona', 'CASUAL')
+                    if persona == 'GRINDER': 
+                        dither_chance *= 0.1 # 10x less likely to dither
+                        
                     if random.random() < dither_chance:
-                         dither_delay = random.uniform(3.0, 7.0)
+                         dither_delay = random.uniform(3.0, 7.0) if persona != 'GRINDER' else random.uniform(1.0, 2.5)
                          self.log("STEALTH", f"Dithering: Human is hesitating before sending '{cmd_id}' (+{round(dither_delay, 1)}s)...")
                          await asyncio.sleep(dither_delay)
 
@@ -684,14 +697,25 @@ class NeuraBot(commands.Bot):
                     if priority >= 3: # Only count grinding towards bursts
                          self.current_burst_count += 1
                          ac_burst = self.config.get('stealth', {}).get('activity_clustering', {})
-                         if self.current_burst_count >= self.burst_limit:
-                              mb_range = ac_burst.get('mini_break_range', [15, 45])
+                         if self.current_burst_count >= getattr(self, 'burst_limit', 5):
+                              persona = getattr(self, 'session_persona', 'CASUAL')
+                              mode = getattr(self, 'session_mode', 'CASUAL')
+                              
+                              if persona == 'GRINDER':
+                                   mb_range = [2, 5] if mode == 'BINGE' else [3, 8]
+                              else:
+                                   mb_range = ac_burst.get('mini_break_range', [15, 45])
+                                   
                               burp_pause = random.uniform(mb_range[0], mb_range[1]) if isinstance(mb_range, list) else random.uniform(15.0, 45.0)
                               self.log("STEALTH", f"Activity Burst: Finished burst of {self.current_burst_count} commands. Mini-break: {round(burp_pause)}s.")
                               await asyncio.sleep(burp_pause)
                               self.current_burst_count = 0
+                              
                               bl_range = ac_burst.get('burst_limit', [2, 5])
-                              self.burst_limit = random.randint(bl_range[0], bl_range[1]) if isinstance(bl_range, list) else random.randint(2, 6)
+                              if persona == 'GRINDER':
+                                   self.burst_limit = random.randint(20, 35) if mode == 'BINGE' else random.randint(12, 25)
+                              else:
+                                   self.burst_limit = random.randint(bl_range[0], bl_range[1]) if isinstance(bl_range, list) else random.randint(2, 6)
                     
                     if cmd_id and cmd_id in self.cmd_states:
                         if cmd_id in ["rpp", "quest", "level_quotes", "huntbot", "daily", "cookie", "coinflip", "slots"]:
