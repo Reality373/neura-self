@@ -426,6 +426,7 @@ function updateArrVal(p, i, v) {
             val = (v.length < 15) ? Number(v) : v;
         }
         a[i] = val;
+        checkDirty();
     }
 }
 

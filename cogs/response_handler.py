@@ -118,7 +118,6 @@ class ResponseHandler(commands.Cog):
                     self.last_success_time[cmd_type] = now
                     
                     if cmd_type == 'hunt':
-                        self.bot.stats['hunt_count'] = self.bot.stats.get('hunt_count', 0) + 1
                         self.bot.log("SUCCESS", f"Hunt confirmed for {self.bot.display_name}")
                     elif cmd_type == 'curse':
                         if self.bot.is_message_for_me(message, role="source", keyword="puts a curse on"):
@@ -156,7 +155,6 @@ class ResponseHandler(commands.Cog):
             now = time.time()
             if now - self.last_success_time.get('battle', 0) > 5.0:
                 self.last_success_time['battle'] = now
-                self.bot.stats['battle_count'] = self.bot.stats.get('battle_count', 0) + 1
                 self.bot.log("SUCCESS", f"Battle confirmed for {self.bot.display_name}")
 
     async def _handle_cooldowns(self, content, message):
