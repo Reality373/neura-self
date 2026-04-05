@@ -1,4 +1,25 @@
 # ===============================
+# NeuraSelf Core Data Isolation
+# ===============================
+
+# Ignore Account Tokens & Auth (IMPORTANT)
+config/accounts.json
+config/auth.json
+
+# Ignore All Per-Account Settings
+config/settings_*.json
+
+# KEEP TRACKING the defaults and examples
+!config/settings.json
+!config/settings_v2.json
+!config/*.example.json
+
+# Ignore All Session Data & Databases
+data/
+logs/
+*.log
+
+# ===============================
 # Python cache & bytecode
 # ===============================
 __pycache__/

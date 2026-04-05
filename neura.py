@@ -29,6 +29,20 @@ import core.state as state
 
 console = Console()
 
+def bootstrap_configs():
+    """Phase 31: Automatic Config Bootstrapping"""
+    import shutil
+    for config_file in ['accounts.json', 'auth.json']:
+        active_path = os.path.join(state.CONFIG_DIR, config_file)
+        example_path = active_path + ".example"
+        
+        if not os.path.exists(active_path) and os.path.exists(example_path):
+            try:
+                shutil.copy2(example_path, active_path)
+                console.print(f"[bold green][+][/bold green] Initialized {config_file} from template.")
+            except Exception as e:
+                console.print(f"[bold red][!] Failed to bootstrap {config_file}: {e}[/bold red]")
+
 def show_banner():
     os.system('cls' if os.name == 'nt' else 'clear') 
     neura_ascii_art = [

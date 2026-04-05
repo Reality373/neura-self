@@ -1,0 +1,18 @@
+{
+    "accounts": [
+        {
+            "token": "YOUR_DISCORD_TOKEN_HERE_1",
+            "name": "Main Account",
+            "channels": ["CHANNEL_ID_1_A", "CHANNEL_ID_1_B"],
+            "id": "1000000000000000000",
+            "enabled": true
+        },
+        {
+            "token": "YOUR_DISCORD_TOKEN_HERE_2",
+            "name": "Alt account",
+            "channels": ["CHANNEL_ID_2_A"],
+            "id": "2000000000000000000",
+            "enabled": false
+        }
+    ]
+}
