@@ -20,7 +20,6 @@ from discord.ext import commands
 class Others(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.zoo = False
         self.emoji_dict = {}
         
         try:
@@ -102,36 +101,14 @@ class Others(commands.Cog):
             if not self.bot.is_message_for_me(message):
                 return
             
-            # Phase 28: Zoo Deliberation (4s - 10s)
+            # Phase 28: Weapon Check Deliberation (4s - 10s)
             deliberation = random.uniform(4.0, 10.0)
-            self.bot.log("STEALTH", f"Broken Team: User is deciding which animals to add ({round(deliberation, 1)}s)...")
+            self.bot.log("STEALTH", f"Stats Check: User is deciding to view weapon stats ({round(deliberation, 1)}s)...")
             await asyncio.sleep(deliberation)
             
-            self.zoo = True
-            await self.bot.neura_enqueue("zoo", priority=2)
-            self.bot.log("SYS", "Zoo triggered (Team Setup)")
-
-        elif "'s zoo! **" in content and self.zoo:
-            if not self.bot.is_message_for_me(message, role="header"):
-                return
-            animals = self.get_emoji_names(message.content)
-            animals.reverse()
-            self.zoo = False
-            
-            # Phase 28: Animal Selection Variance (Favorites)
-            # 20% chance to pick random animals instead of the first 3
-            if random.random() < 0.20:
-                 random.shuffle(animals)
-                 self.bot.log("STEALTH", "Team Mgmt: Picking 'favorite' animals instead of the best.")
-
-            for i in range(min(len(animals), 3)):
-                # Phase 28: Weighted Reaction Layer (3s - 8s)
-                # Simulates typing out individual names from zoo list
-                reaction_delay = random.uniform(3.0, 8.0)
-                await asyncio.sleep(reaction_delay)
-                
-                await self.bot.neura_enqueue(f"team add {animals[i]}", priority=2)
-                self.bot.log("CMD", f"Team Mgmt: Added animal: {animals[i]}")
+            w_id = random.randint(1, 50)
+            await self.bot.neura_enqueue(f"weapon {w_id}", priority=2)
+            self.bot.log("CMD", f"Stealth Action: Checked weapon {w_id}")
 
     async def register_actions(self):
         pass

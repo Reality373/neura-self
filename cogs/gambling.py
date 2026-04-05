@@ -15,32 +15,46 @@ import random
 import core.state as state
 from discord.ext import commands
 
-def _pick_amount(cfg_amount):
-    """Pick a random gambling amount from config.
-    
-    Supports:
-      - int/float: single fixed amount (e.g. 400)
-      - list [min, max]: random amount in multiples of 100 within range (e.g. [100, 1000])
-    """
-    if isinstance(cfg_amount, list) and len(cfg_amount) >= 2:
-        low = int(cfg_amount[0])
-        high = int(cfg_amount[1])
-        # Round to nearest 100 boundaries
-        low_r = max(100, (low + 99) // 100 * 100)   # round UP to nearest 100
-        high_r = max(low_r, high // 100 * 100)       # round DOWN to nearest 100
-        steps = (high_r - low_r) // 100 + 1
-        return low_r + random.randint(0, steps - 1) * 100
-    return int(cfg_amount) if cfg_amount else 1
-
 class Gambling(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.active = True
         self.task = None
-        
+        self.current_cf_bet = None
+        self.current_slots_bet = None
+
+    def _get_next_bet(self, cfg_amount, current_bet, won):
+        if not isinstance(cfg_amount, list) or len(cfg_amount) < 2:
+            return int(cfg_amount) if cfg_amount else 1
+
+        low = int(cfg_amount[0])
+        high = int(cfg_amount[1])
+        low_r = max(100, (low + 99) // 100 * 100)
+        high_r = max(low_r, high // 100 * 100)
+
+        if current_bet is None or won:
+            range_total = high_r - low_r
+            max_start = low_r + int(range_total * 0.3)
+            max_start = max(low_r, max_start // 100 * 100)
+            if max_start == low_r:
+                return low_r
+            steps = (max_start - low_r) // 100
+            if steps <= 0: return low_r
+            return low_r + random.randint(0, steps) * 100
+        else:
+            increase = random.randint(1, 3) * 100
+            new_bet = current_bet + increase
+            if new_bet > high_r:
+                new_bet = high_r
+            return new_bet
+
     def trigger_coinflip(self):
         cfg = self.bot.config.get('commands', {}).get('coinflip', {})
-        amount = _pick_amount(cfg.get('amount', 1))
+        
+        if self.current_cf_bet is None:
+            self.current_cf_bet = self._get_next_bet(cfg.get('amount', 1), None, True)
+
+        amount = self.current_cf_bet
         side = cfg.get('side', 'h')
         
         self.bot.cmd_states['coinflip']['content'] = f"cf {side} {amount}"
@@ -49,11 +63,36 @@ class Gambling(commands.Cog):
 
     def trigger_slots(self):
         cfg = self.bot.config.get('commands', {}).get('slots', {})
-        amount = _pick_amount(cfg.get('amount', 1))
+
+        if self.current_slots_bet is None:
+            self.current_slots_bet = self._get_next_bet(cfg.get('amount', 1), None, True)
+
+        amount = self.current_slots_bet
         
         self.bot.cmd_states['slots']['content'] = f"slots {amount}"
         self.bot.cmd_states['slots']['delay'] = random.uniform(45, 180)
         self.bot.stats['slots_count'] = self.bot.stats.get('slots_count', 0) + 1
+
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        if message.author.id != int(self.bot.owo_bot_id): return
+        if not self.bot.is_message_for_me(message): return
+        
+        content = message.content.lower()
+        if "you won" in content or "you lost" in content or "went with" in content or "nothing" in content:
+            if "coinflip" in self.bot.last_sent_command.lower() or "cf " in self.bot.last_sent_command.lower():
+                cfg = self.bot.config.get('commands', {}).get('coinflip', {})
+                if "won" in content:
+                    self.current_cf_bet = self._get_next_bet(cfg.get('amount', 1), self.current_cf_bet, True)
+                elif "lost" in content or "went with" in content:
+                    self.current_cf_bet = self._get_next_bet(cfg.get('amount', 1), self.current_cf_bet, False)
+                    
+            elif "slots" in self.bot.last_sent_command.lower() or "s " in self.bot.last_sent_command.lower():
+                cfg = self.bot.config.get('commands', {}).get('slots', {})
+                if "won" in content:
+                    self.current_slots_bet = self._get_next_bet(cfg.get('amount', 1), self.current_slots_bet, True)
+                elif "nothing" in content or "lost" in content:
+                    self.current_slots_bet = self._get_next_bet(cfg.get('amount', 1), self.current_slots_bet, False)
 
     async def register_actions(self):
         cfg_cf = self.bot.config.get('commands', {}).get('coinflip', {})

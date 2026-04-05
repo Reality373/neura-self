@@ -144,7 +144,12 @@ class NeuraGems(commands.Cog):
         if not is_for_me:
             return
 
-        if "caught" in content and "spent" in content and "hunt is empowered by" not in content:
+        if ("found a" in content or "received a" in content) and "lootbox" in content:
+            if self.bot.user_id in state.missing_gems_cache and state.missing_gems_cache[self.bot.user_id]:
+                self.bot.log("SYS", "[NeuraGems] Lootbox acquired! Resetting missing gems cache to re-check on next hunt.")
+                state.missing_gems_cache[self.bot.user_id] = []
+
+        if ("caught" in content or "found" in content) and "hunt is empowered by" not in content:
             now = time.time()
             if now - self.last_inv_time > 15:
                 cnf = self.bot.config.get('commands', {}).get('gems', {})
@@ -267,6 +272,7 @@ class NeuraGems(commands.Cog):
                 type_cfg = cnf.get('types', {})
                 all_enabled_types = [t for t, enabled in type_cfg.items() if enabled]
 
+                still_missing_after = []
                 for g_type in all_enabled_types:
                     idx = type_to_index.get(g_type)
                     if idx is None: continue
@@ -286,11 +292,40 @@ class NeuraGems(commands.Cog):
                         state.missing_gems_cache[self.bot.user_id] = [g for g in state.missing_gems_cache[self.bot.user_id] if (g['name'] if isinstance(g, dict) else g) != g_type]
                         self.bot.log("SYS", f"[NeuraGems] {g_type} found in inventory, removed from missing cache.")
                     else:
-                        # Add to cache with timestamp
-                        current_missing_names = [g['name'] if isinstance(g, dict) else g for g in state.missing_gems_cache[self.bot.user_id]]
-                        if g_type not in current_missing_names:
-                            state.missing_gems_cache[self.bot.user_id].append({"name": g_type, "time": time.time()})
-                            self.bot.log("WARN", f"[NeuraGems] {g_type} not found in inventory, added to cache.")
+                        still_missing_after.append(g_type)
+
+                if still_missing_after:
+                    lb_count = available.get("050", available.get("50", 0))
+                    if lb_count > 0:
+                        self.bot.log("SYS", f"[NeuraGems] Missing gems ({', '.join(still_missing_after)}), but found {lb_count} Lootboxes! Opening them...")
+                        
+                        await asyncio.sleep(random.uniform(2.0, 4.0))
+                        await self.bot.neura_enqueue("owo lb all", priority=2)
+                        
+                        # Set checking gems again so the next owo inv triggers gem equipment
+                        state.checking_gems[self.bot.user_id] = {
+                            "time": time.time(),
+                            "types": missing_types
+                        }
+                        
+                        await asyncio.sleep(random.uniform(5.0, 8.0))
+                        await self.bot.neura_enqueue("owo inv", priority=2)
+                        
+                        # Still equip whatever we found in this iteration before exiting
+                        if to_use:
+                            cmd_ids = [gid if not gid.startswith('0') else gid[1:] for gid in to_use]
+                            use_cmd = f"owo use {' '.join(cmd_ids)}"
+                            await asyncio.sleep(random.uniform(3.0, 6.0))
+                            await self.bot.neura_enqueue(use_cmd, priority=2)
+                            self.bot.log("SUCCESS", f"[NeuraGems] Equipped intermediate gems: {use_cmd}")
+                        
+                        return # wait for the next inventory check where it will equip the new gems and then cache if still missing!
+                    else:
+                        for g_type in still_missing_after:
+                            current_missing_names = [g['name'] if isinstance(g, dict) else g for g in state.missing_gems_cache[self.bot.user_id]]
+                            if g_type not in current_missing_names:
+                                state.missing_gems_cache[self.bot.user_id].append({"name": g_type, "time": time.time()})
+                                self.bot.log("WARN", f"[NeuraGems] {g_type} missing and no Lootboxes to open. Added to missing cache.")
 
                 if to_use:
                     cmd_ids = [gid if not gid.startswith('0') else gid[1:] for gid in to_use]
@@ -300,10 +335,9 @@ class NeuraGems(commands.Cog):
                     await asyncio.sleep(random.uniform(6.0, 15.0))
                     await self.bot.neura_enqueue(use_cmd, priority=2)
                     self.bot.log("SUCCESS", f"[NeuraGems] Equipped: {use_cmd}")
-                    # it prevent rechecking for 10s after using a gem ,,,(it is to prevent spam)
                     self.last_inv_time = time.time()
-                else:
-                    self.bot.log("WARN", f"[NeuraGems] Inventory checked, but no matching gems found for: {missing_types}")
+                elif not still_missing_after:
+                    self.bot.log("WARN", f"[NeuraGems] Inventory checked, but no gems missing or available to use.")
 
                 pass
 
