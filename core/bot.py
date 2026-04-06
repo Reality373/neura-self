@@ -295,7 +295,8 @@ class NeuraBot(commands.Bot):
         known = ['hunt', 'battle', 'curse', 'huntbot', 'daily', 'cookie',
                 'quest', 'checklist', 'cf', 'slots', 'autohunt', 'upgrade',
                 'sacrifice', 'team', 'zoo', 'use', 'inv', 'sell', 'crate',
-                'lootbox', 'run', 'pup', 'piku','pray']
+                'lootbox', 'run', 'pup', 'piku', 'pray', 'weapon', 'w', 
+                'cash', 'c', 'lb']
         
         if self.shortforms:
             for sf in self.shortforms.values():
