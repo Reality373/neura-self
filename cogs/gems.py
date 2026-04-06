@@ -40,9 +40,9 @@ GEM_RARITY_PREFIX = {'c': 'common', 'u': 'uncommon', 'r': 'rare', 'e': 'epic', '
 TIER_PRIORITY = ['fabled', 'legendary', 'mythical', 'epic', 'rare', 'uncommon', 'common']
 
 class NeuraGems(commands.Cog):
-    def __init__(self, bot):
         self.bot = bot
         self.active = True
+        self.last_full_sync = 0 # Phase 31: 4H Safety Sync
         
         # gem_tiers[tier][slot_index] = gem_id
         # Slot order: [huntGem(gem1), empoweredGem(star), luckyGem(gem3), specialGem(gem4)]
@@ -75,23 +75,23 @@ class NeuraGems(commands.Cog):
     def find_gems_available(self, content):
         """
         Parse OwO inventory message into {gem_id: count} dict.
-
-        Real Discord message format:
-            `051`<:cgem1:492572122120585240>˰˸˶  (gem1, common, 86 count)
-            `079`<:cstar:1101731000721096744>˰˰˵  (star/slot2, common, 5 count)
-
-        We handle both gem{1,3,4} and star emoji names.
-        The numeric ID (e.g. '051') is used directly in 'owo use 51'.
+        Supports both superscript and standard numeric counts.
         """
-        # Match backtick-wrapped ID, then Discord emoji containing gem/star name
+        # Phase 31: Robust Regex for both superscript and standard numbers
         matches = re.findall(
-            r'`(\d{3})`<a?:([cfelmru])(gem[134]|star):\d+>([\u2070-\u2079\d]+)',
+            r'`(\d{3})`<a?:([cfelmru])(gem[134]|star):\d+>([⁰¹²³⁴⁵⁶⁷⁸⁹\d]+)',
             content,
             re.IGNORECASE
         )
         available = {}
         for item_id, rarity_prefix, gem_type, count_str in matches:
             count = self.convert_small_numbers(count_str)
+            if count == 0: # Try standard int if superscript failed
+                try:
+                    nums = "".join(filter(str.isdigit, count_str))
+                    count = int(nums) if nums else 0
+                except: continue
+            
             if count > 0:
                 available[item_id] = count
         return available
@@ -219,10 +219,14 @@ class NeuraGems(commands.Cog):
             return
 
         # ── Hunt message: determine which slots are active / empty ──
-        # Only process hunt messages (not lootbox/item found messages)
-        if (("caught" in lower or "found" in lower) and is_for_me and "hunt is empowered by" in lower):
-            # active_slot_map = {0: 'c', 2: 'e'} — slot indices present in message
-            active_slot_map = self._parse_active_slots_from_hunt(message)
+        # Phase 31: Decoupled from "empowered by" string to detect 0-gem states
+        if (("caught" in lower or "found" in lower or "gained" in lower) and is_for_me and "hunt is " in lower):
+            # If the specific "empowered by" string is missing, it means 0 gems are active
+            if "empowered by" not in lower:
+                active_slot_map = {}
+            else:
+                active_slot_map = self._parse_active_slots_from_hunt(message)
+                
             active_slot_names = {SLOT_NAMES[idx] for idx in active_slot_map if idx < len(SLOT_NAMES)}
             
             type_cfg = cnf.get('types', {})
@@ -252,11 +256,10 @@ class NeuraGems(commands.Cog):
             if now - self.last_inv_time < 15:
                 return  # Debounce
 
-            # Use inventory snapshot to decide if owo inv is even worth running
-            inv_cache = state.gem_inventory_cache.get(self.bot.user_id, {})
-            missing_cache = state.missing_gems_cache.get(self.bot.user_id, [])
-
             worth_checking = []
+            now = time.time()
+            
+            # Phase 31: Passive Sync - triggered by any 'owo inv' response (handled in inventory block below)
             for slot in empty_slots:
                 if slot in missing_cache:
                     continue  # Already know we have none
@@ -264,11 +267,19 @@ class NeuraGems(commands.Cog):
                 if not inv_cache:
                     worth_checking.append(slot)  # No snapshot yet, check once
                 elif self._slot_has_any_in_inventory(idx, inv_cache):
-                    worth_checking.append(slot)
+                    # Cache says we HAVE gems! Use them now
+                    to_equip = self.build_equip_list([slot], dict(inv_cache))
+                    if to_equip:
+                        # Update cache and send use command immediately
+                        for gid in to_equip: inv_cache[gid] = max(0, inv_cache.get(gid, 1)-1)
+                        cmd_ids = [gid.lstrip('0') or '0' for gid in to_equip]
+                        use_cmd = f"owo use {' '.join(cmd_ids)}"
+                        self.bot.log("SUCCESS", f"[NeuraGems] Instant Use (Cache Sync): {use_cmd}")
+                        await asyncio.sleep(random.uniform(3.0, 7.0))
+                        await self.bot.neura_enqueue(use_cmd, priority=2)
+                    continue
                 else:
-                    # Snapshot says 0 — mark as missing to suppress future checks
-                    state.missing_gems_cache.setdefault(self.bot.user_id, []).append(slot)
-                    self.bot.log("INFO", f"[NeuraGems] Slot '{slot}' has no gems in inventory. Suppressing check.")
+                    worth_checking.append(slot)
 
             if not worth_checking:
                 return
@@ -287,10 +298,8 @@ class NeuraGems(commands.Cog):
         if not is_for_me:
             return
         if ("'s inventory" in lower or "'s gems" in lower) and "**" in lower:
-            if not state.checking_gems.get(self.bot.user_id):
-                return
-
-            gem_info = state.checking_gems.get(self.bot.user_id, {})
+            # Passive / Direct Inventory Update
+            gem_info = state.checking_gems.get(self.bot.user_id) or {}
             target_slots = gem_info.get("types", list(SLOT_NAMES))
             state.checking_gems[self.bot.user_id] = False
 
@@ -338,6 +347,12 @@ class NeuraGems(commands.Cog):
             if fillable_slots:
                 to_equip = self.build_equip_list(fillable_slots, dict(available))
                 if to_equip:
+                    # Phase 31: Decrement local cache to keep it accurate
+                    inv_cache = state.gem_inventory_cache.get(self.bot.user_id, {})
+                    for gid in to_equip:
+                        if gid in inv_cache and inv_cache[gid] > 0:
+                            inv_cache[gid] -= 1
+
                     # Strip leading zeros for command arg
                     cmd_ids = [gid.lstrip('0') or '0' for gid in to_equip]
                     use_cmd = f"owo use {' '.join(cmd_ids)}"
@@ -345,6 +360,7 @@ class NeuraGems(commands.Cog):
                     await asyncio.sleep(random.uniform(4.0, 10.0))
                     await self.bot.neura_enqueue(use_cmd, priority=2)
                     self.last_inv_time = time.time()
+                    self.last_full_sync = time.time() # Reset sync timer on success
                 else:
                     self.bot.log("WARN", "[NeuraGems] Inventory checked but find_gems_to_use returned empty.")
 

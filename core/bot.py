@@ -93,11 +93,12 @@ class NeuraBot(commands.Bot):
         self.neura_scheduler_task = None
         self.is_busy = False
 
-        # Phase 32: Bot-Specific Stealth Persistence (Multi-Account Isolation)
-        self.is_on_break = False
-        self.last_break_check = time.time()
-        self.break_lock = asyncio.Lock()
         self.current_break_interval = None
+        
+        # Phase 33: Dynamic Configuration Hot-Reload
+        self.last_config_mtime = 0
+        self.user_config_path = None
+        self.last_sync_check = 0
         self.session_persona = "GRINDER"
         self.session_mode = "BINGE"
         self.is_sleeping = False
@@ -415,8 +416,13 @@ class NeuraBot(commands.Bot):
             
             if uid:
                 user_config_file = os.path.join(state.CONFIG_DIR, f'settings_{uid}.json')
+                self.user_config_path = user_config_file
                 
                 if os.path.exists(user_config_file):
+                    # Phase 33: Update local mtime so we don't trigger a re-sync loop immediately
+                    try: self.last_config_mtime = os.path.getmtime(user_config_file)
+                    except: pass
+
                     try:
                         with open(user_config_file, 'r') as f:
                             user_cfg = json.load(f)
@@ -769,6 +775,18 @@ class NeuraBot(commands.Bot):
                 items = list(self.cmd_states.items())
                 random.shuffle(items)
                 
+                # Phase 33: Smart Settings Watcher (Check for Dashboard changes every 60s)
+                if now - self.last_sync_check > 60:
+                    self.last_sync_check = now
+                    if self.user_config_path and os.path.exists(self.user_config_path):
+                        try:
+                            mtime = os.path.getmtime(self.user_config_path)
+                            if mtime > self.last_config_mtime:
+                                self.log("SYS", "Dashboard changes detected! Hot-Reloading settings...")
+                                self.last_config_mtime = mtime
+                                await self.sync_settings({})
+                        except: pass
+
                 # Phase 20: Forgetfulness Logic (0.1% chance to skip utility for 60-120s)
                 forgetfulness_roll = random.random()
                 
