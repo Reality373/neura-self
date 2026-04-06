@@ -185,7 +185,14 @@ class Boss(commands.Cog):
 
         self.bot.log("BOSS", f"Boss Battle detected (ID: {tracking_id})! Attempting join...")
         
-        await asyncio.sleep(random.uniform(2.0, 5.0))
+        cfg = self.bot.config.get("boss", {})
+        reaction_range = cfg.get("reaction_time", [1.0, 4.0])
+        if isinstance(reaction_range, list) and len(reaction_range) == 2:
+            delay = random.uniform(reaction_range[0], reaction_range[1])
+        else:
+            delay = float(reaction_range)
+            
+        await asyncio.sleep(delay)
         
         if self.bot.paused:
             return

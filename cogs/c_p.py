@@ -94,8 +94,13 @@ class NeuraCursePray(commands.Cog):
             
             self.bot.cmd_states['cursepray']['content'] = full_cmd
 
-            # Phase 17: Social Timing Jitter (300 - 450s)
-            cur_cooldown = random.uniform(300, 450)
+            # Phase 34: Connect Cooldown to Dashboard Config
+            cd_range = cfg.get("cooldown", [310, 450])
+            if isinstance(cd_range, list) and len(cd_range) == 2:
+                cur_cooldown = random.uniform(cd_range[0], cd_range[1])
+            else:
+                cur_cooldown = float(cd_range)
+                
             self.bot.cmd_states['cursepray']['delay'] = cur_cooldown
 
 

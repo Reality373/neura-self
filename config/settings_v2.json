@@ -116,7 +116,12 @@
                 "luckyGem": true,
                 "specialGem": false
             },
-            "use_gems_set": false
+            "sync_interval": [
+                1200,
+                1800
+            ],
+            "use_gems_set": false,
+            "use_shortform": true
         },
         "giveaway": {
             "enabled": true,
@@ -228,6 +233,17 @@
             ],
             "dithering_chance": 0.1
         },
+        "curiosity": {
+            "enabled": true,
+            "commands": [
+                "owo cash",
+                "owo inv",
+                "owo zoo",
+                "owo profile"
+            ],
+            "trigger_min": 100,
+            "trigger_max": 250
+        },
         "session": {
             "circadian_rhythm": {
                 "enabled": true,
@@ -259,8 +275,8 @@
     "reactionBot": {
         "enabled": false,
         "cooldown": [
-            0.5,
-            1
+            2.5,
+            7.0
         ],
         "hunt_and_battle": false,
         "owo": false,
@@ -312,7 +328,7 @@
             4.0
         ],
         "join_all_guilds": false,
-        "join_chance": 1.0,
+        "join_chance": 100,
         "ignore_guilds": []
     },
     "level_grind": {
@@ -336,9 +352,10 @@
     "utilities": {
         "autochannel": {
             "enabled": true,
+            "channels": [],
             "cooldown": [
-                500,
-                650
+                1200,
+                3600
             ]
         }
     }

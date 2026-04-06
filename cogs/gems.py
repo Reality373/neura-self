@@ -366,7 +366,17 @@ class NeuraGems(commands.Cog):
                     self.bot.log("WARN", "[NeuraGems] Inventory checked but find_gems_to_use returned empty.")
 
     async def register_actions(self):
-        pass
+        cnf = self.bot.config.get('commands', {}).get('gems', {})
+        if cnf.get('enabled', True):
+            interval_cfg = cnf.get('sync_interval', [1200, 1800])
+            if isinstance(interval_cfg, list) and len(interval_cfg) == 2:
+                interval = random.uniform(interval_cfg[0], interval_cfg[1])
+            else:
+                interval = float(interval_cfg)
+            
+            # Phase 34: Proactive Gem Sync (Guaranteed inventory checks)
+            await self.bot.neura_register_command("gem_sync", "owo inv", priority=2, delay=interval, initial_offset=random.uniform(60, 300))
+            self.bot.log("SYS", f"[NeuraGems] Proactive Sync enabled (Interval: {round(interval/60, 1)}m)")
 
 async def setup(bot):
     cog = NeuraGems(bot)
