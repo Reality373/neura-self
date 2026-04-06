@@ -78,6 +78,7 @@ class NeuraBot(commands.Bot):
         self.last_sent_time = 0
         self.last_sent_command = ""
         self.last_sent_id = None
+        self.last_activity_attempt = time.time()  # Phase 14: Track intentional work vs stalls
         self.command_lock = asyncio.Lock()
         self.min_command_interval = 2.2
         self.current_drifted_min_interval = 2.2
@@ -571,6 +572,9 @@ class NeuraBot(commands.Bot):
             try:
                 priority, ts, content, options = await self.neura_queue.get()
                 cmd_id = options.get("_cmd_id")
+                
+                # Phase 14 Fix: Signal the Watchdog that we are actively working
+                self.last_activity_attempt = time.time()
 
                 ran_successfully = False
                 
@@ -643,6 +647,9 @@ class NeuraBot(commands.Bot):
                         cmd_clean = content.lower().strip()
                         if "hunt" in cmd_clean or "battle" in cmd_clean:
                              if "huntbot" not in cmd_clean and "autohunt" not in cmd_clean:
+                                # Phase 34: Re-enqueue instead of dropping (Reliability Patch)
+                                await asyncio.sleep(0.5)
+                                await self.neura_enqueue(content, priority=priority, _cmd_id=cmd_id)
                                 continue
 
                     skip_typing = options.get("skip_typing")
@@ -656,11 +663,11 @@ class NeuraBot(commands.Bot):
                     from modules.stealth_circadian import handle_circadian_rhythm
                     await handle_circadian_rhythm(self, stealth_cfg)
                     
-                    is_resting = getattr(self, 'is_sleeping', False) or getattr(self, 'is_on_break', False)
                     if is_resting and priority >= 3:
-                        if cmd_id and cmd_id in self.cmd_states:
-                             self.cmd_states[cmd_id]['last_ran'] = time.time()
-                        continue # Drop routine scheduled actions while resting, let queue handle dashboard actions
+                        # Phase 34: Re-enqueue instead of dropping (Reliability Patch)
+                        await asyncio.sleep(2.0)
+                        await self.neura_enqueue(content, priority=priority, _cmd_id=cmd_id)
+                        continue # Stay in wait-cycle, let queue handle dashboard actions
 
                     if priority in [2, 4]:
                         delib_cfg = self.config.get('stealth', {}).get('deliberation_pauses', {})
@@ -671,6 +678,9 @@ class NeuraBot(commands.Bot):
                     if cmd_id and cmd_id in self.cmd_states:
                         last_ran = self.cmd_states[cmd_id]['last_ran']
                         if time.time() - last_ran < 2.0:
+                            # Too fast! Re-enqueue to avoid triggering OwO spam protection
+                            await asyncio.sleep(1.0)
+                            await self.neura_enqueue(content, priority=priority, _cmd_id=cmd_id)
                             continue
                         
                         self.cmd_states[cmd_id]['last_ran'] = time.time()
@@ -745,14 +755,13 @@ class NeuraBot(commands.Bot):
                     await asyncio.sleep(1)
                     continue
 
-                # Phase 14: OwO Lag Detection
-                # If command sent > 25s ago and no success, simulate user getting annoyed.
-                # Only fire after first command has been sent (last_sent_time != 0) and
-                # after the warmup window has passed to avoid false startup alarms.
+                # Phase 14: OwO Lag Detection (Fixed for Multi-Account Stability)
+                # If no queue activity or heartbeats for > 60s, assume a loop crash.
                 now = time.time()
-                delta_last_sent = now - self.last_sent_time
+                delta_last_activity = now - self.last_activity_attempt
                 past_warmup = now > self.warmup_until
-                if delta_last_sent > 25 and not self.paused and not self.is_sleeping and self.last_sent_time != 0 and past_warmup:
+                
+                if delta_last_activity > 60 and not self.paused and not self.is_sleeping and self.last_activity_attempt != 0 and past_warmup:
                     # Increment consecutive_failures so the Phase 6 escape hatch can trigger
                     uid = self.user_id
                     if uid not in state.account_stats:
@@ -760,9 +769,9 @@ class NeuraBot(commands.Bot):
                     state.account_stats[uid]['consecutive_failures'] = state.account_stats[uid].get('consecutive_failures', 0) + 1
                     
                     wait_time = random.uniform(45.0, 120.0)
-                    self.log("ALARM", f"Bot appears unresponsive (25s+, streak: {state.account_stats[uid]['consecutive_failures']}). Pausing for {round(wait_time)}s.")
-                    self.throttle_until = now + wait_time
-                    self.last_sent_time = now # prevent re-triggering until next command
+                    self.log("ALARM", f"Bot appears unresponsive (60s+ stall, streak: {state.account_stats[uid]['consecutive_failures']}). Resetting activity timer.")
+                    # self.throttle_until = now + wait_time # Stop forcing a pause, just reset and try again
+                    self.last_activity_attempt = now
                     continue
 
                 # New: OwO Bot unresponsive detection (Phase 6)
