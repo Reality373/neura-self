@@ -89,6 +89,7 @@ def run_dashboard():
 
 async def main():
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    bootstrap_configs()
     
     while True:
         show_banner()

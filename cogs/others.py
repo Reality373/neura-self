@@ -21,6 +21,9 @@ class Others(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.emoji_dict = {}
+        self._weapon_ids: list = []       # parsed from owo w list
+        self._last_weapon_list_time: float = 0.0
+        self._weapon_check_interval: float = 3600.0  # once per hour
         
         try:
             with open("utils/emojis.json", 'r', encoding="utf-8") as file:
@@ -47,14 +50,9 @@ class Others(commands.Cog):
                     if hasattr(comp, 'children'):
                         btn = comp.children[0]
                         if not btn.disabled:
-                            # Phase 13: Rule Reading Delay (4-10s)
-                            # Phase 28: Rule Scanning Expansion (3.0s - 12.0s)
                             scanning_delay = random.uniform(3.0, 12.0)
-                            
-                            # Additional delay for long rule sets (10% chance)
                             if random.random() < 0.10:
                                 scanning_delay += 2.0
-                                
                             self.bot.log("STEALTH", f"Rule Acceptance: User is scanning rules ({round(scanning_delay, 1)}s)...")
                             await asyncio.sleep(scanning_delay)
                             await btn.click()
@@ -78,7 +76,25 @@ class Others(commands.Cog):
             return
 
         content = message.content.lower()
-        
+
+        # --- Parse weapon list response (owo w with no args) ---
+        # Each weapon line starts with a 6-char alphanumeric ID like "EA2FTF" or "DW2LLC"
+        if self.bot.is_message_for_me(message):
+            raw = message.content
+            weapon_ids = re.findall(r'^([A-Z0-9]{6})\s+:', raw, re.MULTILINE)
+            if weapon_ids and len(weapon_ids) >= 3:
+                self._weapon_ids = weapon_ids
+                self.bot.log("SYS", f"[WeaponCheck] Parsed {len(weapon_ids)} weapons from list.")
+                # Now pick one and inspect it after a deliberation pause
+                chosen = random.choice(weapon_ids)
+                deliberation = random.uniform(4.0, 10.0)
+                self.bot.log("STEALTH", f"[WeaponCheck] Scrolling to weapon {chosen} ({round(deliberation, 1)}s)...")
+                await asyncio.sleep(deliberation)
+                await self.bot.neura_enqueue(f"weapon {chosen}", priority=2)
+                self.bot.log("CMD", f"[WeaponCheck] Checked weapon {chosen}")
+                return
+
+        # --- Cash balance update + trigger weapon list ---
         if "you currently have" in content and "cowoncy" in content:
             if not self.bot.is_message_for_me(message, role="header"):
                 return
@@ -97,18 +113,18 @@ class Others(commands.Cog):
             except:
                 pass
 
-
             if not self.bot.is_message_for_me(message):
                 return
-            
-            # Phase 28: Weapon Check Deliberation (4s - 10s)
-            deliberation = random.uniform(4.0, 10.0)
-            self.bot.log("STEALTH", f"Stats Check: User is deciding to view weapon stats ({round(deliberation, 1)}s)...")
-            await asyncio.sleep(deliberation)
-            
-            w_id = random.randint(1, 50)
-            await self.bot.neura_enqueue(f"weapon {w_id}", priority=2)
-            self.bot.log("CMD", f"Stealth Action: Checked weapon {w_id}")
+
+            # Phase 28: Smart Weapon Check — fetch list first, inspect real ID
+            now = time.time()
+            if now - self._last_weapon_list_time > self._weapon_check_interval:
+                self._last_weapon_list_time = now
+                deliberation = random.uniform(4.0, 10.0)
+                self.bot.log("STEALTH", f"[WeaponCheck] User is opening weapon inventory ({round(deliberation, 1)}s)...")
+                await asyncio.sleep(deliberation)
+                await self.bot.neura_enqueue("weapon", priority=2)
+                self.bot.log("CMD", "[WeaponCheck] Requested weapon list (owo w)...")
 
     async def register_actions(self):
         pass

@@ -35,6 +35,7 @@ stats = {
 
 checking_gems = {}
 missing_gems_cache = {}
+gem_inventory_cache = {}  # {user_id: {gem_id: count, ...}} — updated every owo inv
 STATS_DIR = os.path.join(DATA_DIR, 'stats')
 os.makedirs(STATS_DIR, exist_ok=True)
 
