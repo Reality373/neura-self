@@ -40,6 +40,7 @@ GEM_RARITY_PREFIX = {'c': 'common', 'u': 'uncommon', 'r': 'rare', 'e': 'epic', '
 TIER_PRIORITY = ['fabled', 'legendary', 'mythical', 'epic', 'rare', 'uncommon', 'common']
 
 class NeuraGems(commands.Cog):
+    def __init__(self, bot):
         self.bot = bot
         self.active = True
         self.last_full_sync = 0 # Phase 31: 4H Safety Sync

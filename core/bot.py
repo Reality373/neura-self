@@ -95,6 +95,11 @@ class NeuraBot(commands.Bot):
 
         self.current_break_interval = None
         
+        # Phase 32: Bot-Specific Stealth Persistence (Multi-Account Isolation)
+        self.is_on_break = False
+        self.last_break_check = time.time()
+        self.break_lock = asyncio.Lock()
+
         # Phase 33: Dynamic Configuration Hot-Reload
         self.last_config_mtime = 0
         self.user_config_path = None
