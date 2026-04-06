@@ -78,7 +78,7 @@
                 <div class="mobile-sidebar-close" onclick="toggleMobileMenu()">&times;</div>
             </div>
 
-            <div class="account-selector-container" style="padding: 0 20px 20px 20px;">
+            <div class="account-selector-container" style="padding: 0 20px 20px 20px; display: none;">
                 <label style="color:#aaa; font-size:0.8rem; display:block; margin-bottom:5px;">ACTIVE ACCOUNT</label>
                 <div class="custom-select-wrapper">
                     <div class="custom-select" id="accountDropdownHeader" onclick="toggleAccountDropdown()">
@@ -134,6 +134,12 @@
         </aside>
 
         <main class="content-area">
+            <div class="account-bar-wrapper">
+                <div class="account-bar" id="horizontalAccountList">
+                    <!-- Cards injected via JS -->
+                </div>
+            </div>
+
             <div id="dash" class="active-view view">
                 <div class="top-bar">
                     <div class="dash-logo-header">
@@ -305,6 +311,10 @@
             <div id="config" class="view">
                 <div class="top-bar">
                     <div class="top-controls">
+                        <button class="btn-control input-dark" onclick="openSyncModal()" style="margin-right: 10px;">
+                            <span class="icon-svg" style="--icon: url('/static/assets/neura_icons/sync.svg');"></span>
+                            <span class="btn-text">COPY TO OTHERS</span>
+                        </button>
                         <button class="btn-control green" onclick="saveAllConfigs()">
                             <span class="icon-svg"
                                 style="--icon: url('/static/assets/neura_icons/floppy-disk.svg');"></span> <span class="btn-text">SAVE SETTINGS</span>
@@ -459,6 +469,32 @@
                 style="--icon: url('/static/assets/neura_icons/play.svg');"></span></button>
         <button class="mobile-control-btn red" onclick="action('stop', this)"><span class="icon-svg"
                 style="--icon: url('/static/assets/neura_icons/stop.svg');"></span></button>
+    </div>
+
+    <!-- Sync Config Modal -->
+    <div id="syncConfigModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Sync Configuration</h2>
+                <p class="modal-desc">Select accounts to overwrite with the current settings of <span id="syncSourceId" style="color:var(--primary); font-weight:bold;">Account</span>.</p>
+            </div>
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <span style="font-size:0.8rem; color:#aaa;">SELECT TARGETS</span>
+                <label style="font-size:0.8rem; color:var(--primary); cursor:pointer; display:flex; align-items:center; gap:5px;">
+                    <input type="checkbox" id="syncSelectAll" onchange="toggleSyncSelectAll(this)"> Select All
+                </label>
+            </div>
+
+            <div class="sync-account-list" id="syncAccountList">
+                <!-- Selectable accounts injected via JS -->
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-modal btn-modal-cancel" onclick="closeSyncModal()">CANCEL</button>
+                <button class="btn-modal btn-modal-confirm" id="btnConfirmSync" onclick="confirmSyncConfig()" disabled>SYNC SETTINGS</button>
+            </div>
+        </div>
     </div>
 
     <script src="/static/js/script.js"></script>

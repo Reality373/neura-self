@@ -22,37 +22,47 @@ class Gambling(commands.Cog):
         self.task = None
         self.current_cf_bet = None
         self.current_slots_bet = None
+        self.last_cf_time = 0
+        self.last_slots_time = 0
 
-    def _get_next_bet(self, cfg_amount, current_bet, won):
-        if not isinstance(cfg_amount, list) or len(cfg_amount) < 2:
-            return int(cfg_amount) if cfg_amount else 1
+    def _get_next_bet(self, cfg, current_bet, won):
+        # New explicit keys
+        min_bet = cfg.get('min_bet')
+        max_bet = cfg.get('max_bet')
+        increase = cfg.get('increase')
+        multiplier = cfg.get('multiplier', 1.0) # New multiplier key
+        
+        # Fallback to old 'amount' list if new keys missing
+        if min_bet is None or max_bet is None:
+            cfg_amount = cfg.get('amount', [100, 500])
+            if isinstance(cfg_amount, list) and len(cfg_amount) >= 2:
+                min_bet = int(cfg_amount[0])
+                max_bet = int(cfg_amount[1])
+            else:
+                min_bet = int(cfg_amount) if cfg_amount else 100
+                max_bet = min_bet * 10
+        
+        if increase is None:
+            increase = 100 # Default increment
 
-        low = int(cfg_amount[0])
-        high = int(cfg_amount[1])
-        low_r = max(100, (low + 99) // 100 * 100)
-        high_r = max(low_r, high // 100 * 100)
+        min_bet, max_bet, increase = int(min_bet), int(max_bet), int(increase)
+        multiplier = float(multiplier)
 
         if current_bet is None or won:
-            range_total = high_r - low_r
-            max_start = low_r + int(range_total * 0.3)
-            max_start = max(low_r, max_start // 100 * 100)
-            if max_start == low_r:
-                return low_r
-            steps = (max_start - low_r) // 100
-            if steps <= 0: return low_r
-            return low_r + random.randint(0, steps) * 100
+            # Start/Reset: Pick min or optional small random offset
+            return min_bet
         else:
-            increase = random.randint(1, 3) * 100
-            new_bet = current_bet + increase
-            if new_bet > high_r:
-                new_bet = high_r
+            # Loss: Multiply first, then add flat increase
+            new_bet = int(current_bet * multiplier) + increase
+            if new_bet > max_bet:
+                new_bet = max_bet
             return new_bet
 
     def trigger_coinflip(self):
         cfg = self.bot.config.get('commands', {}).get('coinflip', {})
         
         if self.current_cf_bet is None:
-            self.current_cf_bet = self._get_next_bet(cfg.get('amount', 1), None, True)
+            self.current_cf_bet = self._get_next_bet(cfg, None, True)
 
         amount = self.current_cf_bet
         side = cfg.get('side', 'h')
@@ -60,18 +70,20 @@ class Gambling(commands.Cog):
         self.bot.cmd_states['coinflip']['content'] = f"cf {side} {amount}"
         self.bot.cmd_states['coinflip']['delay'] = random.uniform(45, 180)
         self.bot.stats['coinflip_count'] = self.bot.stats.get('coinflip_count', 0) + 1
+        self.last_cf_time = time.time()
 
     def trigger_slots(self):
         cfg = self.bot.config.get('commands', {}).get('slots', {})
 
         if self.current_slots_bet is None:
-            self.current_slots_bet = self._get_next_bet(cfg.get('amount', 1), None, True)
+            self.current_slots_bet = self._get_next_bet(cfg, None, True)
 
         amount = self.current_slots_bet
         
         self.bot.cmd_states['slots']['content'] = f"slots {amount}"
         self.bot.cmd_states['slots']['delay'] = random.uniform(45, 180)
         self.bot.stats['slots_count'] = self.bot.stats.get('slots_count', 0) + 1
+        self.last_slots_time = time.time()
 
     @commands.Cog.listener()
     async def on_message(self, message):
@@ -79,20 +91,32 @@ class Gambling(commands.Cog):
         if not self.bot.is_message_for_me(message): return
         
         content = message.content.lower()
+        now = time.time()
+        
         if "you won" in content or "you lost" in content or "went with" in content or "nothing" in content:
-            if "coinflip" in self.bot.last_sent_command.lower() or "cf " in self.bot.last_sent_command.lower():
+            # Check if this response is for a recently sent CF (within 15s)
+            if now - self.last_cf_time < 15:
                 cfg = self.bot.config.get('commands', {}).get('coinflip', {})
                 if "won" in content:
-                    self.current_cf_bet = self._get_next_bet(cfg.get('amount', 1), self.current_cf_bet, True)
+                    self.bot.log("SUCCESS", f"Coinflip WON. Resetting bet.")
+                    self.current_cf_bet = self._get_next_bet(cfg, self.current_cf_bet, True)
                 elif "lost" in content or "went with" in content:
-                    self.current_cf_bet = self._get_next_bet(cfg.get('amount', 1), self.current_cf_bet, False)
+                    self.bot.log("SUCCESS", f"Coinflip LOST. Incrementing bet.")
+                    self.current_cf_bet = self._get_next_bet(cfg, self.current_cf_bet, False)
+                self.last_cf_time = 0 # Prevent double trigger
+                self.trigger_coinflip() # Immediately prep next bet 
                     
-            elif "slots" in self.bot.last_sent_command.lower() or "s " in self.bot.last_sent_command.lower():
+            # Check if this response is for a recently sent Slots (within 15s)
+            elif now - self.last_slots_time < 15:
                 cfg = self.bot.config.get('commands', {}).get('slots', {})
                 if "won" in content:
-                    self.current_slots_bet = self._get_next_bet(cfg.get('amount', 1), self.current_slots_bet, True)
+                    self.bot.log("SUCCESS", f"Slots WON. Resetting bet.")
+                    self.current_slots_bet = self._get_next_bet(cfg, self.current_slots_bet, True)
                 elif "nothing" in content or "lost" in content:
-                    self.current_slots_bet = self._get_next_bet(cfg.get('amount', 1), self.current_slots_bet, False)
+                    self.bot.log("SUCCESS", f"Slots LOST. Incrementing bet.")
+                    self.current_slots_bet = self._get_next_bet(cfg, self.current_slots_bet, False)
+                self.last_slots_time = 0 # Prevent double trigger
+                self.trigger_slots() # Immediately prep next bet
 
     async def register_actions(self):
         cfg_cf = self.bot.config.get('commands', {}).get('coinflip', {})

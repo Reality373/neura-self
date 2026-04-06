@@ -350,6 +350,40 @@ def settings():
         except:
             return jsonify({})
 
+@app.route('/api/settings/copy', methods=['POST'])
+@login_required
+def copy_settings():
+    data = request.json
+    from_id = data.get('from_id')
+    to_ids = data.get('to_ids', [])
+    
+    if not from_id or not to_ids:
+        return jsonify({"status": "error", "message": "Missing source or destination IDs"}), 400
+        
+    source_path = os.path.join(state.CONFIG_DIR, f'settings_{from_id}.json')
+    if not os.path.exists(source_path):
+        source_path = os.path.join(state.CONFIG_DIR, 'settings.json') # Fallback to global
+        
+    try:
+        with open(source_path, 'r') as f:
+            source_config = json.load(f)
+            
+        for target_id in to_ids:
+            target_path = os.path.join(state.CONFIG_DIR, f'settings_{target_id}.json')
+            with open(target_path, 'w') as f:
+                json.dump(source_config, f, indent=4)
+                
+            # Sync to active bot instance if running
+            for bot in state.bot_instances:
+                if bot.user and str(bot.user.id) == str(target_id):
+                    asyncio.run_coroutine_threadsafe(bot.sync_settings(source_config), bot.loop)
+        
+        state.log_command("SYS", f"Config copied from {from_id} to {len(to_ids)} accounts", "success")
+        return jsonify({"status": "success", "count": len(to_ids)})
+    except Exception as e:
+        state.log_command("ERROR", f"Failed to copy settings: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route('/api/accounts', methods=['GET', 'POST'])
 @app.route('/api/accounts/list', methods=['GET'])
 @login_required

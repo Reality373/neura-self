@@ -123,10 +123,26 @@ async function fetchAccounts() {
             if (!currentAccountId || !data.find(a => a.id === currentAccountId)) {
                 currentAccountId = data[0].id;
             }
+            renderHorizontalAccounts();
             renderAccountDropdown();
             updateAccountHeader();
         }
     } catch (e) { console.error("Failed to fetch accounts", e); }
+}
+
+function renderHorizontalAccounts() {
+    const container = document.getElementById('horizontalAccountList');
+    if (!container) return;
+    
+    container.innerHTML = accountsList.map(acc => `
+        <div class="account-bar-card ${acc.id === currentAccountId ? 'active' : ''}" id="bar-card-${acc.id}" onclick="selectAccount('${acc.id}')">
+            ${acc.avatar ? `<img src="${acc.avatar}" class="account-bar-avatar">` : '<div class="account-bar-avatar" style="display:flex; align-items:center; justify-content:center; background:#333;"><span class="icon-svg" style="--icon: url(\'/static/assets/neura_icons/discord.svg\');"></span></div>'}
+            <div class="account-bar-info">
+                <span class="account-bar-name">${acc.username}</span>
+                <span class="account-bar-status ${acc.paused ? 'status-paused' : 'status-online'}" id="bar-status-${acc.id}">${acc.paused ? 'PAUSED' : 'ONLINE'}</span>
+            </div>
+        </div>
+    `).join('');
 }
 
 function toggleAccountDropdown() {
@@ -138,8 +154,18 @@ function toggleAccountDropdown() {
 
 function selectAccount(id) {
     currentAccountId = id;
+    
+    // Update Horizontal Bar UI
+    document.querySelectorAll('.account-bar-card').forEach(c => c.classList.remove('active'));
+    const activeCard = document.getElementById(`bar-card-${id}`);
+    if (activeCard) {
+        activeCard.classList.add('active');
+        activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+
     updateAccountHeader();
-    toggleAccountDropdown();
+    renderAccountDropdown(); 
+    
     if (lineChart) lineChart.data.datasets[0].data = Array(30).fill(0);
     
     // Refresh context-dependent views
@@ -336,7 +362,8 @@ function renderField(path, f, v) {
         const isPriority = path.includes('priorities');
         
         if (!isPriority) {
-            if (['interval', 'cooldown', 'duration', 'delay', 'min', 'max'].some(tf => lowerLabel.includes(tf))) unit = 's';
+            // New: Prevent unit 's' for bet fields
+            if (['interval', 'cooldown', 'duration', 'delay', 'min', 'max'].some(tf => lowerLabel.includes(tf)) && !lowerLabel.includes('bet')) unit = 's';
             if (lowerLabel.endsWith('_h')) unit = 'h';
             if (lowerLabel.endsWith('_m') || lowerLabel.endsWith('_min')) unit = 'm';
             if (lowerLabel.endsWith('_s') || lowerLabel.endsWith('_sec')) unit = 's';
@@ -344,7 +371,14 @@ function renderField(path, f, v) {
         
         if (lowerLabel.includes('rate') || lowerLabel.includes('reaction') || lowerLabel.includes('amount') || lowerLabel.includes('chance') || lowerLabel.includes('length')) unit = '';
         
-        const finalLabel = (isPriority && f.l === 'radar') ? `${f.l} (1 is lowest)` : f.l;
+        // New: Custom labels for better UX
+        let finalLabel = f.l;
+        if (f.l === 'min_bet') finalLabel = "MINIMUM BET";
+        else if (f.l === 'max_bet') finalLabel = "MAXIMUM CEILING";
+        else if (f.l === 'increase') finalLabel = "LOSS INCREMENT";
+        else if (f.l === 'multiplier') finalLabel = "LOSS MULTIPLIER";
+        else if (isPriority && f.l === 'radar') finalLabel = `${f.l} (1 is lowest)`;
+
         return renderStepper(path, finalLabel, v, unit);
     }
     
@@ -502,8 +536,30 @@ function update() {
         if (d.cash) document.getElementById('cash').innerText = d.cash.toLocaleString();
         if (d.uptime) document.getElementById('uptimeDisplay').innerText = d.uptime;
         if (d.logs) renderLogs(d.logs);
+        
+        // Update Status indicators
         const dot = document.getElementById('statusDot'), lbl = document.getElementById('botStatus');
-        lbl.innerText = d.status; dot.className = "ping-dot " + (d.status === "PAUSED" ? "paused" : "");
+        const barStatus = document.getElementById(`bar-status-${currentAccountId}`);
+        const barCard = document.getElementById(`bar-card-${currentAccountId}`);
+        
+        let displayStatus = d.status;
+        let statusClass = d.status === "PAUSED" ? "status-paused" : "status-online";
+        
+        if (d.stealth_matrix && d.stealth_matrix.is_sleeping) {
+            displayStatus = "SLEEPING";
+            statusClass = "status-offline";
+        }
+
+        lbl.innerText = displayStatus;
+        dot.className = "ping-dot " + (displayStatus === "PAUSED" ? "paused" : (displayStatus === "SLEEPING" ? "offline" : ""));
+        
+        if (barStatus) {
+            barStatus.innerText = displayStatus;
+            barStatus.className = `account-bar-status ${statusClass}`;
+        }
+        if (barCard) {
+            if (displayStatus === "PAUSED") barCard.classList.add('paused'); else barCard.classList.remove('paused');
+        }
         
         if (d.status === "PAUSED" && d.security) {
             document.getElementById('securityAlert').style.display = 'flex';
@@ -1020,3 +1076,85 @@ document.addEventListener('DOMContentLoaded', () => {
     initDynamicTilt();
     setInterval(fetchAccounts, 5000);
 });
+// --- Sync Config Logic ---
+window.openSyncModal = function() {
+    const modal = document.getElementById('syncConfigModal');
+    const list = document.getElementById('syncAccountList');
+    const sourceLabel = document.getElementById('syncSourceId');
+    const sourceAcc = accountsList.find(a => a.id === currentAccountId);
+    
+    sourceLabel.innerText = sourceAcc ? sourceAcc.username : "Current Account";
+    
+    list.innerHTML = accountsList.filter(a => a.id !== currentAccountId).map(acc => `
+        <div class="sync-account-item" onclick="toggleSyncItem('${acc.id}')">
+            <input type="checkbox" value="${acc.id}" class="sync-checkbox" onclick="event.stopPropagation()" onchange="updateSyncButton()">
+            ${acc.avatar ? `<img src="${acc.avatar}" class="account-avatar" style="width:24px; height:24px;">` : '<span class="icon-svg" style="--icon: url(\'/static/assets/neura_icons/discord.svg\'); width:20px; height:20px;"></span>'}
+            <span>${acc.username}</span>
+        </div>
+    `).join('');
+    
+    if (list.innerHTML === "") {
+        list.innerHTML = '<div style="color:#666; text-align:center; padding:20px;">No other accounts found to sync with.</div>';
+    }
+    
+    document.getElementById('syncSelectAll').checked = false;
+    updateSyncButton();
+    modal.classList.add('show');
+};
+
+window.closeSyncModal = function() {
+    document.getElementById('syncConfigModal').classList.remove('show');
+};
+
+window.toggleSyncItem = function(id) {
+    const cb = document.querySelector(`.sync-checkbox[value="${id}"]`);
+    if (cb) {
+        cb.checked = !cb.checked;
+        updateSyncButton();
+    }
+};
+
+window.toggleSyncSelectAll = function(cb) {
+    document.querySelectorAll('.sync-checkbox').forEach(c => c.checked = cb.checked);
+    updateSyncButton();
+};
+
+window.updateSyncButton = function() {
+    const selected = document.querySelectorAll('.sync-checkbox:checked').length;
+    const btn = document.getElementById('btnConfirmSync');
+    btn.disabled = selected === 0;
+    btn.innerText = selected > 0 ? `SYNC SETTINGS TO ${selected} ACCOUNTS` : 'SELECT ACCOUNTS';
+};
+
+window.confirmSyncConfig = async function() {
+    const selectedIds = Array.from(document.querySelectorAll('.sync-checkbox:checked')).map(cb => cb.value);
+    const btn = document.getElementById('btnConfirmSync');
+    const originalText = btn.innerText;
+    
+    btn.disabled = true;
+    btn.innerHTML = '<span class="icon-svg" style="--icon: url(\'/static/assets/neura_icons/sync.svg\'); animation: spin 2s linear infinite;"></span> SYNCING...';
+    
+    try {
+        const res = await fetch('/api/settings/copy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                from_id: currentAccountId,
+                to_ids: selectedIds
+            })
+        });
+        
+        const data = await res.json();
+        if (data.status === 'success') {
+            showToast(`Successfully synced config to ${data.count} accounts!`, 'success');
+            closeSyncModal();
+        } else {
+            showToast(`Sync failed: ${data.message}`, 'error');
+        }
+    } catch (e) {
+        showToast("Request failed during sync", "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = originalText;
+    }
+};

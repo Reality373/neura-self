@@ -29,19 +29,85 @@ import core.state as state
 
 console = Console()
 
+def deep_merge(base, override):
+    """Recursively merge defaults from base into override without overwriting existing keys"""
+    changed = False
+    for key, value in base.items():
+        if key not in override:
+            override[key] = value
+            changed = True
+        elif isinstance(value, dict) and isinstance(override.get(key), dict):
+            if deep_merge(value, override[key]):
+                changed = True
+    return changed
+
+def ensure_settings_integrity():
+    """Phase 31: Master Setting Sync & Migration"""
+    changed_any = False
+    master_path = os.path.join(state.CONFIG_DIR, 'settings.json')
+    if not os.path.exists(master_path): return False
+    
+    with open(master_path, 'r') as f:
+        master_cfg = json.load(f)
+        
+    for file in os.listdir(state.CONFIG_DIR):
+        if file.startswith("settings") and file.endswith(".json") and not file.endswith(".example.json") and file != "settings.json":
+            path = os.path.join(state.CONFIG_DIR, file)
+            try:
+                with open(path, 'r') as f:
+                    cfg = json.load(f)
+                
+                # Step 1: Force migrate specific keys (Gambling)
+                changed = False
+                for game in ['coinflip', 'slots']:
+                    game_cfg = cfg.get('commands', {}).get(game)
+                    if game_cfg and 'amount' in game_cfg:
+                        amt = game_cfg['amount']
+                        if isinstance(amt, list) and len(amt) >= 2:
+                            game_cfg['min_bet'], game_cfg['max_bet'] = amt[0], amt[1]
+                        else:
+                            game_cfg['min_bet'] = int(amt) if amt else 100
+                            game_cfg['max_bet'] = game_cfg['min_bet'] * 10
+                        game_cfg['increase'] = 0
+                        game_cfg['multiplier'] = 2.0
+                        del game_cfg['amount']
+                        changed = True
+                
+                # Step 2: Recursive Sync with Master
+                if deep_merge(master_cfg, cfg):
+                    changed = True
+                
+                if changed:
+                    with open(path, 'w') as f:
+                        json.dump(cfg, f, indent=4)
+                    console.print(f"[bold blue][*][/bold blue] Synchronized {file} with master settings blueprint.")
+                    changed_any = True
+            except:
+                pass
+    return changed_any
+
 def bootstrap_configs():
     """Phase 31: Automatic Config Bootstrapping"""
     import shutil
-    for config_file in ['accounts.json', 'auth.json']:
+    for config_file in ['accounts.json', 'auth.json', 'settings.json']:
         active_path = os.path.join(state.CONFIG_DIR, config_file)
-        example_path = active_path + ".example"
+        example_path = active_path if config_file == 'settings.json' else (active_path + ".example")
         
+        # Ensure we have a settings.json even if it doesn't exist
+        if config_file == 'settings.json' and not os.path.exists(active_path):
+            example = active_path.replace(".json", ".example.json")
+            if os.path.exists(example):
+                shutil.copy2(example, active_path)
+                console.print(f"[bold green][+][/bold green] Initialized master {config_file} from template.")
+
         if not os.path.exists(active_path) and os.path.exists(example_path):
             try:
                 shutil.copy2(example_path, active_path)
                 console.print(f"[bold green][+][/bold green] Initialized {config_file} from template.")
             except Exception as e:
                 console.print(f"[bold red][!] Failed to bootstrap {config_file}: {e}[/bold red]")
+    
+    ensure_settings_integrity()
 
 def show_banner():
     os.system('cls' if os.name == 'nt' else 'clear') 

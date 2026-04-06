@@ -3051,3 +3051,238 @@ select#session-select option {
         font-size: 0.85rem;
     }
 }
+
+/* Horizontal Account Bar */
+.account-bar-wrapper {
+    background: var(--bg-card);
+    border-bottom: 2px solid var(--border);
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 0;
+    z-index: 900;
+}
+
+.account-bar {
+    display: flex;
+    overflow-x: auto;
+    gap: 15px;
+    padding-bottom: 5px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) transparent;
+}
+
+.account-bar::-webkit-scrollbar {
+    height: 4px;
+}
+
+.account-bar::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 10px;
+}
+
+.account-bar-card {
+    min-width: 180px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    user-select: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.account-bar-card:hover {
+    background: rgba(255, 31, 31, 0.05);
+    border-color: rgba(255, 31, 31, 0.3);
+    transform: translateY(-2px);
+}
+
+.account-bar-card.active {
+    background: rgba(255, 31, 31, 0.1);
+    border-color: var(--primary);
+    box-shadow: 0 0 15px rgba(255, 31, 31, 0.2);
+}
+
+.account-bar-card.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: var(--primary);
+    box-shadow: 0 0 10px var(--primary);
+}
+
+.account-bar-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    object-fit: cover;
+}
+
+.account-bar-card.active .account-bar-avatar {
+    border-color: var(--primary);
+    box-shadow: 0 0 8px var(--primary);
+}
+
+.account-bar-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.account-bar-name {
+    display: block;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #eee;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: var(--font-heading);
+}
+
+.account-bar-status {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+.status-online { color: var(--success); }
+.status-paused { color: var(--warning); }
+.status-offline { color: var(--text-muted); }
+
+/* Modals */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.modal-overlay.show {
+    display: flex;
+    opacity: 1;
+}
+
+.modal-content {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 90%;
+    max-width: 500px;
+    padding: 30px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5), 0 0 20px var(--primary-dim);
+    transform: scale(0.9);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.modal-overlay.show .modal-content {
+    transform: scale(1);
+}
+
+.modal-header {
+    margin-bottom: 25px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 15px;
+}
+
+.modal-title {
+    font-size: 1.5rem;
+    font-family: var(--font-heading);
+    color: var(--primary);
+    margin: 0;
+}
+
+.modal-desc {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-top: 10px;
+    line-height: 1.4;
+}
+
+.sync-account-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin: 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sync-account-item {
+    padding: 12px 15px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.sync-account-item:hover {
+    background: rgba(255,255,255,0.08);
+}
+
+.sync-account-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary);
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.btn-modal {
+    padding: 10px 25px;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.btn-modal-cancel {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+}
+
+.btn-modal-confirm {
+    background: var(--primary);
+    border: none;
+    color: #fff;
+    box-shadow: 0 0 15px var(--primary-dim);
+}
+
+.btn-modal-confirm:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 20px var(--primary);
+}
+
+.btn-modal-confirm:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
