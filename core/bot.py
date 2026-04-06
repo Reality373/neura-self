@@ -663,6 +663,7 @@ class NeuraBot(commands.Bot):
                     from modules.stealth_circadian import handle_circadian_rhythm
                     await handle_circadian_rhythm(self, stealth_cfg)
                     
+                    is_resting = getattr(self, 'is_sleeping', False) or getattr(self, 'is_on_break', False)
                     if is_resting and priority >= 3:
                         # Phase 34: Re-enqueue instead of dropping (Reliability Patch)
                         await asyncio.sleep(2.0)
