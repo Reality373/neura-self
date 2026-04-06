@@ -60,19 +60,19 @@
         "coinflip": {
             "enabled": false,
             "use_shortform": true,
-            "amount": [
-                100,
-                500
-            ],
-            "side": "h"
+            "side": "h",
+            "min_bet": 100,
+            "max_bet": 500,
+            "increase": 0,
+            "multiplier": 2.0
         },
         "slots": {
             "enabled": false,
             "use_shortform": true,
-            "amount": [
-                100,
-                500
-            ]
+            "min_bet": 100,
+            "max_bet": 500,
+            "increase": 0,
+            "multiplier": 2.0
         },
         "sell_sac": {
             "sell": {
