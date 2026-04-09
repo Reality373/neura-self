@@ -97,24 +97,28 @@ class Gambling(commands.Cog):
             # Check if this response is for a recently sent CF (within 15s)
             if now - self.last_cf_time < 15:
                 cfg = self.bot.config.get('commands', {}).get('coinflip', {})
-                if "won" in content:
-                    self.bot.log("SUCCESS", f"Coinflip WON. Resetting bet.")
-                    self.current_cf_bet = self._get_next_bet(cfg, self.current_cf_bet, True)
-                elif "lost" in content or "went with" in content:
+                # Phase 35: Check for LOSS first to avoid "you won nothing" false positives
+                if "lost" in content or "went with" in content or "nothing" in content:
                     self.bot.log("SUCCESS", f"Coinflip LOST. Incrementing bet.")
                     self.current_cf_bet = self._get_next_bet(cfg, self.current_cf_bet, False)
+                elif "won" in content:
+                    self.bot.log("SUCCESS", f"Coinflip WON. Resetting bet.")
+                    self.current_cf_bet = self._get_next_bet(cfg, self.current_cf_bet, True)
+                
                 self.last_cf_time = 0 # Prevent double trigger
                 self.trigger_coinflip() # Immediately prep next bet 
                     
             # Check if this response is for a recently sent Slots (within 15s)
             elif now - self.last_slots_time < 15:
                 cfg = self.bot.config.get('commands', {}).get('slots', {})
-                if "won" in content:
-                    self.bot.log("SUCCESS", f"Slots WON. Resetting bet.")
-                    self.current_slots_bet = self._get_next_bet(cfg, self.current_slots_bet, True)
-                elif "nothing" in content or "lost" in content:
+                # Phase 35: Check for LOSS first (Slots: "You won nothing!")
+                if "nothing" in content or "lost" in content:
                     self.bot.log("SUCCESS", f"Slots LOST. Incrementing bet.")
                     self.current_slots_bet = self._get_next_bet(cfg, self.current_slots_bet, False)
+                elif "won" in content:
+                    self.bot.log("SUCCESS", f"Slots WON. Resetting bet.")
+                    self.current_slots_bet = self._get_next_bet(cfg, self.current_slots_bet, True)
+                    
                 self.last_slots_time = 0 # Prevent double trigger
                 self.trigger_slots() # Immediately prep next bet
 

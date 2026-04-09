@@ -260,7 +260,10 @@ class NeuraGems(commands.Cog):
             worth_checking = []
             now = time.time()
             
-            # Phase 31: Passive Sync - triggered by any 'owo inv' response (handled in inventory block below)
+            # Phase 31: Passive Sync - triggered by any 'owo inv' response
+            missing_cache = state.missing_gems_cache.get(self.bot.user_id, [])
+            inv_cache = state.gem_inventory_cache.get(self.bot.user_id, {})
+            
             for slot in empty_slots:
                 if slot in missing_cache:
                     continue  # Already know we have none
@@ -298,7 +301,7 @@ class NeuraGems(commands.Cog):
         # ── Inventory response: snapshot + equip ──
         if not is_for_me:
             return
-        if ("'s inventory" in lower or "'s gems" in lower) and "**" in lower:
+        if (("'s inventory" in lower or "'s gems" in lower or "items in" in lower) and "**" in lower) or ("inventory" in lower and "items" in lower):
             # Passive / Direct Inventory Update
             gem_info = state.checking_gems.get(self.bot.user_id) or {}
             target_slots = gem_info.get("types", list(SLOT_NAMES))
@@ -343,8 +346,10 @@ class NeuraGems(commands.Cog):
                             mc.append(slot)
                             self.bot.log("WARN", f"[NeuraGems] No gems available for slot '{slot}'. Suppressing future checks.")
 
-            # ── Build equip command for all fillable slots ──
-            fillable_slots = [s for s in target_slots if s not in still_missing]
+            # ── Build equip command ONLY for slots that are currently confirmed empty ──
+            # Phase 35: Delta-Equip Optimization (Don't waste active gems)
+            fillable_slots = [s for s in target_slots if (s not in still_missing and self.gem_slot_status.get(s) is False)]
+            
             if fillable_slots:
                 to_equip = self.build_equip_list(fillable_slots, dict(available))
                 if to_equip:
