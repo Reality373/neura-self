@@ -49,6 +49,14 @@ class Control(commands.Cog):
             hours = int(uptime // 3600)
             minutes = int((uptime % 3600) // 60)
             status += f"| Uptime: {hours}h {minutes}m"
+            
+            # Phase 35: Task Health Reporting
+            q_task = self.bot.worker_tasks.get('queue')
+            s_task = self.bot.worker_tasks.get('scheduler')
+            q_status = "ALIVE" if q_task and not q_task.done() else "DEAD"
+            s_status = "ALIVE" if s_task and not s_task.done() else "DEAD"
+            
+            status += f" | Queue: {q_status} | Scheduler: {s_status}"
             self.bot.log("SYS", status)
 
 async def setup(bot):

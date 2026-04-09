@@ -50,7 +50,14 @@ class Others(commands.Cog):
                     if hasattr(comp, 'children'):
                         btn = comp.children[0]
                         if not btn.disabled:
-                            scanning_delay = random.uniform(3.0, 12.0)
+                            cfg = self.bot.config.get('commands', {}).get('others', {})
+                            delay_range = cfg.get('rule_reading_delay', [3.0, 12.0])
+                            
+                            if isinstance(delay_range, list) and len(delay_range) == 2:
+                                scanning_delay = random.uniform(delay_range[0], delay_range[1])
+                            else:
+                                scanning_delay = float(delay_range)
+
                             if random.random() < 0.10:
                                 scanning_delay += 2.0
                             self.bot.log("STEALTH", f"Rule Acceptance: User is scanning rules ({round(scanning_delay, 1)}s)...")
@@ -87,7 +94,15 @@ class Others(commands.Cog):
                 self.bot.log("SYS", f"[WeaponCheck] Parsed {len(weapon_ids)} weapons from list.")
                 # Now pick one and inspect it after a deliberation pause
                 chosen = random.choice(weapon_ids)
-                deliberation = random.uniform(4.0, 10.0)
+                # Phase 35: Link to zoo_deliberation from Dashboard
+                cfg = self.bot.config.get('commands', {}).get('others', {})
+                delib_range = cfg.get('zoo_deliberation', [4.0, 10.0])
+                
+                if isinstance(delib_range, list) and len(delib_range) == 2:
+                    deliberation = random.uniform(delib_range[0], delib_range[1])
+                else:
+                    deliberation = float(delib_range)
+
                 self.bot.log("STEALTH", f"[WeaponCheck] Scrolling to weapon {chosen} ({round(deliberation, 1)}s)...")
                 await asyncio.sleep(deliberation)
                 await self.bot.neura_enqueue(f"weapon {chosen}", priority=2)

@@ -67,9 +67,17 @@ class Gambling(commands.Cog):
         amount = self.current_cf_bet
         side = cfg.get('side', 'h')
         
+        # Phase 35: Sync speed with Dashboard
+        delay_range = cfg.get('bet_delay', [10, 30])
+        if isinstance(delay_range, list) and len(delay_range) == 2:
+            delay = random.uniform(delay_range[0], delay_range[1])
+        else:
+            delay = float(delay_range)
+
         self.bot.cmd_states['coinflip']['content'] = f"cf {side} {amount}"
-        self.bot.cmd_states['coinflip']['delay'] = random.uniform(45, 180)
+        self.bot.cmd_states['coinflip']['delay'] = delay
         self.bot.stats['coinflip_count'] = self.bot.stats.get('coinflip_count', 0) + 1
+        self.bot.log("DEBUG", f"Next Coinflip prep: {side} {amount} in {round(delay,1)}s")
         self.last_cf_time = time.time()
 
     def trigger_slots(self):
@@ -80,9 +88,17 @@ class Gambling(commands.Cog):
 
         amount = self.current_slots_bet
         
+        # Phase 35: Sync speed with Dashboard
+        delay_range = cfg.get('bet_delay', [10, 30])
+        if isinstance(delay_range, list) and len(delay_range) == 2:
+            delay = random.uniform(delay_range[0], delay_range[1])
+        else:
+            delay = float(delay_range)
+
         self.bot.cmd_states['slots']['content'] = f"slots {amount}"
-        self.bot.cmd_states['slots']['delay'] = random.uniform(45, 180)
+        self.bot.cmd_states['slots']['delay'] = delay
         self.bot.stats['slots_count'] = self.bot.stats.get('slots_count', 0) + 1
+        self.bot.log("DEBUG", f"Next Slots prep: {amount} in {round(delay,1)}s")
         self.last_slots_time = time.time()
 
     @commands.Cog.listener()
@@ -90,37 +106,43 @@ class Gambling(commands.Cog):
         if message.author.id != int(self.bot.owo_bot_id): return
         if not self.bot.is_message_for_me(message): return
         
-        content = message.content.lower()
+        # Phase 35: Use get_full_content to read Embeds + Text
+        full_text = self.bot.get_full_content(message)
         now = time.time()
         
-        if "you won" in content or "you lost" in content or "went with" in content or "nothing" in content:
-            # Check if this response is for a recently sent CF (within 15s)
-            if now - self.last_cf_time < 15:
+        # Phase 35: Result detection (Wait up to 45s for OwO response)
+        if "you won" in full_text or "you lost" in full_text or "went with" in full_text or "nothing" in full_text or "spent" in full_text:
+            
+            # Coinflip Detection
+            if self.last_cf_time != 0 and now - self.last_cf_time < 45:
                 cfg = self.bot.config.get('commands', {}).get('coinflip', {})
-                # Phase 35: Check for LOSS first to avoid "you won nothing" false positives
-                if "lost" in content or "went with" in content or "nothing" in content:
-                    self.bot.log("SUCCESS", f"Coinflip LOST. Incrementing bet.")
+                # Check for LOSS first
+                if any(k in full_text for k in ["lost", "nothing", "spent"]):
+                    self.bot.log("SUCCESS", f"Coinflip LOST ({self.current_cf_bet}). Next amount: {int(self.current_cf_bet * cfg.get('multiplier',2.0)) + cfg.get('increase',100)}")
                     self.current_cf_bet = self._get_next_bet(cfg, self.current_cf_bet, False)
-                elif "won" in content:
-                    self.bot.log("SUCCESS", f"Coinflip WON. Resetting bet.")
+                elif "won" in full_text:
+                    self.bot.log("SUCCESS", f"Coinflip WON! Resetting bet.")
                     self.current_cf_bet = self._get_next_bet(cfg, self.current_cf_bet, True)
                 
-                self.last_cf_time = 0 # Prevent double trigger
-                self.trigger_coinflip() # Immediately prep next bet 
+                self.last_cf_time = 0 
+                self.trigger_coinflip() 
                     
-            # Check if this response is for a recently sent Slots (within 15s)
-            elif now - self.last_slots_time < 15:
+            # Slots Detection
+            elif self.last_slots_time != 0 and now - self.last_slots_time < 45:
                 cfg = self.bot.config.get('commands', {}).get('slots', {})
-                # Phase 35: Check for LOSS first (Slots: "You won nothing!")
-                if "nothing" in content or "lost" in content:
-                    self.bot.log("SUCCESS", f"Slots LOST. Incrementing bet.")
+                # Check for LOSS first
+                if any(k in full_text for k in ["nothing", "lost", "spent"]):
+                    self.bot.log("SUCCESS", f"Slots LOST ({self.current_slots_bet}). Next amount: {int(self.current_slots_bet * cfg.get('multiplier',2.0)) + cfg.get('increase',100)}")
                     self.current_slots_bet = self._get_next_bet(cfg, self.current_slots_bet, False)
-                elif "won" in content:
-                    self.bot.log("SUCCESS", f"Slots WON. Resetting bet.")
-                    self.current_slots_bet = self._get_next_bet(cfg, self.current_slots_bet, True)
+                elif "won" in full_text:
+                    if "nothing" in full_text: # Double safety for "won nothing"
+                        self.current_slots_bet = self._get_next_bet(cfg, self.current_slots_bet, False)
+                    else:
+                        self.bot.log("SUCCESS", f"Slots WON! Resetting bet.")
+                        self.current_slots_bet = self._get_next_bet(cfg, self.current_slots_bet, True)
                     
-                self.last_slots_time = 0 # Prevent double trigger
-                self.trigger_slots() # Immediately prep next bet
+                self.last_slots_time = 0 
+                self.trigger_slots() 
 
     async def register_actions(self):
         cfg_cf = self.bot.config.get('commands', {}).get('coinflip', {})

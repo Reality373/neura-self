@@ -38,23 +38,29 @@ class HuntBotManager:
         }
 
     def _get_dynamic_prio(self, trait: str, levels: Dict[str, int], config: Dict) -> int:
-        """ if any dev reviewing code so i try to explain this function :
-        there are 3 rules which i think good for huntbot , and i explain below"""
-
+        """
+        Calculates the effective priority based on user settings and smart meta-rules.
+        """
         spec = self.specs[trait]
         user_prio = config.get('priorities', {}).get(trait, spec.base_prio)
         
-        # meta rule 1: Keep efficiency and Gain leveled together
+        # Meta Rule: Skip rules if 'prefer_meta_strategy' is explicitly False
+        if config.get('prefer_meta_strategy', True) is False:
+            return user_prio
+
+        # Meta Rule 1: Keep efficiency and Gain leveled together
         if trait in ["efficiency", "gain"]:
             other = "gain" if trait == "efficiency" else "efficiency"
             if levels[trait] < levels[other]:
                 return user_prio + 2
         
-        # meta rule 2: DURATION focus if below target (default 12h ~ 125 levels)
-        if trait == "duration" and levels[trait] < config.get('target_duration_lvl', 125):
+        # Meta Rule 2: DURATION focus if below target (Configurable via Dashboard)
+        # default 12h ~ 125 levels
+        target_dur = config.get('target_duration_lvl', 125)
+        if trait == "duration" and levels[trait] < target_dur:
             return user_prio + 3
 
-        # meta rule 3: EXPERIENCE focus after Gain/Eff are maxed
+        # Meta Rule 3: EXPERIENCE focus after Gain/Eff are maxed
         if trait == "exp" and levels["efficiency"] >= 215 and levels["gain"] >= 200:
             return 10
 

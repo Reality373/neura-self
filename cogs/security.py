@@ -119,7 +119,7 @@ class Security(commands.Cog):
     
     def _send_webhook(self, title, message):
         cfg = self.bot.config.get('security', {})
-        wh_cfg = cfg.get('webhook', {})
+        wh_cfg = cfg.get('notifications', {}).get('webhook', {})
         if not wh_cfg.get('enabled', True): return
         url = wh_cfg.get('url')
         if not url: return
@@ -387,16 +387,22 @@ class Security(commands.Cog):
             return
 
     async def _trigger_pause_with_lag(self, channel, title, webhook_msg, is_captcha=False):
-        # Phase 30: Reaction Lag Simulation
-        # Instead of pausing instantly, we wait 2-5 seconds.
-        # This allows any "in-progress" typing to finish organically.
-        reaction_lag = random.uniform(2.0, 5.0)
+        # Phase 35: Sync Reaction Lag Simulation with Dashboard
+        sec_cfg = self.bot.config.get("security", {})
+        lag_range = sec_cfg.get("reaction_lag_range", [2.0, 5.0])
+        
+        if isinstance(lag_range, list) and len(lag_range) == 2:
+            reaction_lag = random.uniform(lag_range[0], lag_range[1])
+        else:
+            reaction_lag = float(lag_range)
+
         self.bot.log("STEALTH", f"Security: Human notice lag (Simulating {round(reaction_lag, 1)}s delay before panic stop).")
         
         await asyncio.sleep(reaction_lag)
         
-        # Phase 30: Accidental Stray Send (15% chance)
-        if random.random() < 0.15:
+        # Phase 35: Stray Command Chance (Configurable)
+        stray_chance = sec_cfg.get("stray_command_on_alert", 0.15)
+        if random.random() < stray_chance:
              stray_cmd = random.choice(["owo h", "owo", "owo b"])
              self.bot.log("STEALTH", f"Stray Command: User accidentally sent '{stray_cmd}' before realizing the alert.")
              await self.bot.neura_enqueue(stray_cmd, priority=1)

@@ -3,7 +3,12 @@
         "monitor_bot_id": "408785106942164992",
         "prefix": "owo ",
         "human_stealth_factor": 0.5,
-        "debug_mode": false
+        "debug_mode": false,
+        "watchdog": {
+            "unresponsiveness_timeout": 60,
+            "max_consecutive_failures": 3,
+            "fail_pause_range": [300, 900]
+        }
     },
     "commands": {
         "owo": {
@@ -64,7 +69,8 @@
             "min_bet": 100,
             "max_bet": 500,
             "increase": 100,
-            "multiplier": 2.0
+            "multiplier": 2.0,
+            "bet_delay": [10, 30]
         },
         "slots": {
             "enabled": false,
@@ -72,7 +78,8 @@
             "min_bet": 100,
             "max_bet": 500,
             "increase": 100,
-            "multiplier": 2.0
+            "multiplier": 2.0,
+            "bet_delay": [10, 30]
         },
         "sell_sac": {
             "sell": {
@@ -138,6 +145,8 @@
             "cash_to_spend": 29000,
             "upgrade": {
                 "enabled": true,
+                "target_duration_lvl": 125,
+                "prefer_meta_strategy": true,
                 "priorities": {
                     "efficiency": 4,
                     "duration": 2,

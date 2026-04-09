@@ -12,12 +12,13 @@
 import discord
 from discord.ext import commands
 import json
-import os
 import time
 import random
-import asyncio
 import re
-import sys
+import os
+import json
+import asyncio
+import traceback
 import core.state as state
 from modules.neura_human import NeuraHuman
 from modules.neura_logs import neura_logger
@@ -122,6 +123,7 @@ class NeuraBot(commands.Bot):
         self.captcha_solver = setup_solver(self)
         self.web_solver = setup_web_solver(self)
         self.log("SYS", "Initializing systems...")
+        self.worker_tasks = {}
         
         try:
             history = state.ht.load_history()
@@ -129,9 +131,11 @@ class NeuraBot(commands.Bot):
         except Exception as e:
             self.log("ERROR", f"Failed to start history session: {e}")
 
+        # Start background workers and track them for health monitoring
+        self.worker_tasks['queue'] = asyncio.create_task(self.neura_queue_worker())
+        self.worker_tasks['scheduler'] = asyncio.create_task(self.neura_scheduler_worker())
         asyncio.create_task(self._process_pending_commands())
-        asyncio.create_task(self.neura_queue_worker())
-        self.neura_scheduler_task = asyncio.create_task(self.neura_scheduler_worker())
+        
         await self._load_cogs()
         setup_power_monitor(self)
 
@@ -570,6 +574,21 @@ class NeuraBot(commands.Bot):
         cmd_counter = 0
         while self.active:
             try:
+                task_status = getattr(self, 'worker_tasks', {}).get('queue')
+                if task_status and task_status.done() and not task_status.cancelled():
+                    try: 
+                        exc = task_status.exception()
+                        if exc: self.log("CRITICAL", f"Queue Worker CRASHED: {exc}\n{traceback.format_exc()}")
+                    except: pass
+
+                await self._queue_loop()
+            except Exception as e:
+                self.log("ERROR", f"Super-Loop Recovery: Queue Worker encountered error: {e}")
+                await asyncio.sleep(5) # Cooldown before retry
+
+    async def _queue_loop(self):
+        while self.active:
+            try:
                 priority, ts, content, options = await self.neura_queue.get()
                 cmd_id = options.get("_cmd_id")
                 
@@ -752,33 +771,42 @@ class NeuraBot(commands.Bot):
         self.log("SYS", "NeuraScheduler started.")
         while self.active:
             try:
+                # Phase 35: Task Health Monitoring (Self-Healing)
+                queue_task = self.worker_tasks.get('queue')
+                if queue_task and (queue_task.done() or queue_task.cancelled()):
+                    self.log("ALARM", "Self-Healing: Command Queue Worker is DEAD. Restarting task...")
+                    self.worker_tasks['queue'] = asyncio.create_task(self.neura_queue_worker())
+                
                 if self.paused:
                     await asyncio.sleep(1)
                     continue
 
-                # Phase 14: OwO Lag Detection (Fixed for Multi-Account Stability)
-                # If no queue activity or heartbeats for > 60s, assume a loop crash.
+                # Phase 35: Dashboard-Synced Watchdog (Fixed for Multi-Account Stability)
+                watchdog_cfg = self.config.get('core', {}).get('watchdog', {})
+                timeout = watchdog_cfg.get('unresponsiveness_timeout', 60)
+                
                 now = time.time()
                 delta_last_activity = now - self.last_activity_attempt
                 past_warmup = now > self.warmup_until
                 
-                if delta_last_activity > 60 and not self.paused and not self.is_sleeping and self.last_activity_attempt != 0 and past_warmup:
+                if delta_last_activity > timeout and not self.paused and not self.is_sleeping and self.last_activity_attempt != 0 and past_warmup:
                     # Increment consecutive_failures so the Phase 6 escape hatch can trigger
                     uid = self.user_id
                     if uid not in state.account_stats:
                         state.account_stats[uid] = state.get_empty_stats()
                     state.account_stats[uid]['consecutive_failures'] = state.account_stats[uid].get('consecutive_failures', 0) + 1
                     
-                    wait_time = random.uniform(45.0, 120.0)
-                    self.log("ALARM", f"Bot appears unresponsive (60s+ stall, streak: {state.account_stats[uid]['consecutive_failures']}). Resetting activity timer.")
-                    # self.throttle_until = now + wait_time # Stop forcing a pause, just reset and try again
+                    self.log("ALARM", f"Bot appears unresponsive ({int(delta_last_activity)}s stall, streak: {state.account_stats[uid]['consecutive_failures']}). Resetting activity timer.")
                     self.last_activity_attempt = now
                     continue
 
-                # New: OwO Bot unresponsive detection (Phase 6)
+                # New: OwO Bot unresponsive detection (Phase 35: Configurable)
+                max_fails = watchdog_cfg.get('max_consecutive_failures', 3)
                 consecutive_failures = state.account_stats.get(self.user_id, {}).get('consecutive_failures', 0)
-                if consecutive_failures >= 3:
-                    wait = random.randint(300, 900) # 5-15 mins
+                if consecutive_failures >= max_fails:
+                    wait_range = watchdog_cfg.get('fail_pause_range', [300, 900])
+                    wait = random.randint(wait_range[0], wait_range[1]) if isinstance(wait_range, list) else int(wait_range)
+                    
                     self.log("WARN", f"OwO Bot is unresponsive ({consecutive_failures} fails). Human is giving up for {int(wait/60)} mins...")
                     self.paused = True
                     await asyncio.sleep(wait)
